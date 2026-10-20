@@ -470,7 +470,7 @@ components:
       properties:
         code:
           type: string
-          enum: [VALIDATION_FAILED, INVALID_REQUEST_BODY, UNAUTHORIZED, LOGIN_FAILED, FORBIDDEN, NOT_FOUND,
+          enum: [VALIDATION_FAILED, INVALID_REQUEST_BODY, BAD_REQUEST, UNAUTHORIZED, LOGIN_FAILED, FORBIDDEN, NOT_FOUND,
                  USERNAME_TAKEN, METHOD_NOT_ALLOWED, UNSUPPORTED_MEDIA_TYPE, INTERNAL_ERROR]
         message: { type: string, description: 사람이 읽는 한국어 안내 }
         errors:

@@ -78,6 +78,8 @@ app_user 1 ──< tip >── 1 route 1 ──< route_step
 | app_user | SEQUENCE app_user_seq (allocationSize 1) | 103 | 101, 102 |
 | tip | SEQUENCE tip_seq (allocationSize 1) | 9 | 7, 8 |
 | route_step | IDENTITY | 1 | (API에 노출하지 않음) |
+
+H2 시퀀스는 값을 32개씩 미리 잡아 두므로 서버를 강제로 끄면(Ctrl+C 대신 프로세스 종료) 다음 번호가 건너뛸 수 있다(실행 확인 때 9 다음이 41). 번호는 유일하기만 하면 되며, 앱은 응답의 id를 읽어 쓰고 연속을 기대하지 않는다.
 | route | 자연 키 code | — | EXPRESS, LOCAL, T2 |
 
 ## 표본 자료(시드)

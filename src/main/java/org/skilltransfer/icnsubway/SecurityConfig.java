@@ -20,11 +20,14 @@ import tools.jackson.databind.json.JsonMapper;
 @Configuration
 public class SecurityConfig {
 
-    /** dev 프로필에서만 H2 콘솔을 따로 연다(프레임 sameOrigin, CSRF 제외). */
+    /**
+     * dev 프로필에서만 H2 콘솔을 따로 연다(프레임 sameOrigin, CSRF 제외).
+     * 빈 이름을 h2Console로 하면 Spring Boot의 H2 콘솔 서블릿 빈과 겹쳐 시작하지 못한다.
+     */
     @Bean
     @Order(1)
     @Profile("dev")
-    SecurityFilterChain h2Console(HttpSecurity http) throws Exception {
+    SecurityFilterChain h2ConsoleSecurity(HttpSecurity http) throws Exception {
         http.securityMatcher("/h2-console/**")
                 .authorizeHttpRequests(a -> a.anyRequest().permitAll())
                 .csrf(AbstractHttpConfigurer::disable)

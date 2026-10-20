@@ -1,16 +1,27 @@
 package org.skilltransfer.icnsubway;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 
 /** V01~V09: 로그인 없이 보는 경로·단계·팁. */
 class PublicReadTest extends ApiTestSupport {
 
+    @Autowired ApplicationContext context;
+
     @Test
     void health() throws Exception {
         getWith("/api/health", null).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test
+    void h2ConsoleIsOffOutsideDevProfile() {
+        assertThat(context.containsBean("h2ConsoleSecurity")).isFalse();
+        assertThat(context.containsBean("h2Console")).isFalse();
     }
 
     @Test
