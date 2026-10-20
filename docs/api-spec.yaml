@@ -1,0 +1,479 @@
+openapi: 3.0.3
+info:
+  title: ICN Subway Steps API
+  version: 1.0.0
+  description: |
+    인천공항 T1 입국장 → 서울역행 공항철도(AREX) 탑승까지 단계 안내와 단계별 팁 API.
+    교재 7장 방식(Spring Boot 4.1.1 · H2 · JWT HS256)을 따르고 분실물(items) 대신 경로·단계·팁 도메인을 쓴다.
+
+    권한 요약
+    - 공개: GET /api/routes, GET /api/routes/{route}/steps, GET /api/tips, GET /api/tips/{id}, POST /api/auth/*
+    - 인증: POST /api/tips, GET /api/me/tips
+    - 인증 + 올린 사람: PATCH /api/tips/{id}/status (다른 사용자는 403)
+
+    공통 규칙
+    - JSON 필드 이름은 camelCase다. 문자 인코딩은 UTF-8.
+    - 공개 GET에 Authorization 헤더가 붙었는데 토큰이 무효·만료·변조면 401이다. 헤더가 없으면 공개 GET은 200이다.
+      /api/auth/signup·/api/auth/login은 Authorization 헤더를 보지 않는다(오래된 토큰이 붙어도 로그인 가능).
+    - 요청 본문에 정하지 않은 항목(status, ownerId, verifiedAt, id 등)이 있으면 400 INVALID_REQUEST_BODY.
+    - 글자 수는 앞뒤 공백 제거 뒤 유니코드 코드 포인트로 센다(이모지 1개 = 1자).
+    - 오류 응답은 모두 Error 스키마 {code, message, errors}다. 스택 추적·SQL·토큰은 넣지 않는다.
+    - 같은 요청에 여러 실패가 겹치면 401(인증) → 400(입력) → 404(대상 없음) → 403(올린 사람 아님) 순으로 판단한다.
+servers:
+  - url: http://127.0.0.1:8097
+    description: 로컬 개발 PC
+  - url: http://10.0.2.2:8097
+    description: Android 에뮬레이터에서 본 같은 서버
+tags:
+  - name: routes
+  - name: tips
+  - name: auth
+paths:
+  /api/routes:
+    get:
+      tags: [routes]
+      summary: 경로 목록 (S01)
+      description: 표시 순서대로 준다. T2는 available=false, stepCount=0(준비 중).
+      security: []
+      responses:
+        '200':
+          description: 경로 목록
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [routes]
+                properties:
+                  routes:
+                    type: array
+                    items: { $ref: '#/components/schemas/Route' }
+              example:
+                routes:
+                  - code: EXPRESS
+                    name: { en: Express Train, ko: 직통열차 }
+                    summary: { en: Non-stop to Seoul Station · ticket needed, ko: 서울역까지 무정차 · 승차권 필요 }
+                    available: true
+                    stepCount: 5
+                  - code: LOCAL
+                    name: { en: All-stop Train, ko: 일반열차 }
+                    summary: { en: Stops at every station · T-money card, ko: 모든 역 정차 · 교통카드(T-money) }
+                    available: true
+                    stepCount: 5
+                  - code: T2
+                    name: { en: T2 → Seoul Station, ko: T2 → 서울역 }
+                    summary: { en: From T2 arrivals, ko: T2 입국장에서 출발 }
+                    available: false
+                    stepCount: 0
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/routes/{route}/steps:
+    get:
+      tags: [routes]
+      summary: 한 경로의 단계 목록 (S02)
+      description: |
+        stepNo 순서로 준다. 준비 중 경로(T2)는 200과 빈 steps.
+        단계 문구는 시안 v03 초안이며 현장 확인 전이다(docs/data-model.md).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RoutePath'
+      responses:
+        '200':
+          description: 단계 목록
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [route, steps]
+                properties:
+                  route: { type: string, example: EXPRESS }
+                  steps:
+                    type: array
+                    items: { $ref: '#/components/schemas/Step' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: 없는 경로 코드(대소문자 구분)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { code: NOT_FOUND, message: 경로를 찾을 수 없습니다., errors: {} }
+  /api/tips:
+    get:
+      tags: [tips]
+      summary: 한 단계의 팁 목록 (S02)
+      description: |
+        id 내림차순(새 팁 먼저). 토큰이 있으면 mine을 판단하고, 없으면 mine은 모두 false.
+      security: [{}, { bearerAuth: [] }]
+      parameters:
+        - name: route
+          in: query
+          required: true
+          schema: { type: string, enum: [EXPRESS, LOCAL] }
+        - name: step
+          in: query
+          required: true
+          description: 1부터 그 경로의 stepCount까지
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: 팁 목록(0건이면 빈 배열)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TipList' }
+        '400':
+          description: route가 없거나 안내 중이 아님, step이 없거나 범위 밖
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example:
+                code: VALIDATION_FAILED
+                message: 입력값을 확인하세요.
+                errors: { step: 1~5 사이의 단계 번호를 보내세요. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [tips]
+      summary: 팁 올리기 (S03)
+      description: |
+        올린 사람(ownerId)은 검증한 토큰의 사용자, status=VERIFIED, verifiedAt=createdAt=지금은 서버가 정한다.
+        title·location은 앞뒤 공백을 제거해 저장하고, note는 공백 제거 뒤 빈 값이면 null로 저장한다.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TipCreateRequest' }
+            example:
+              route: LOCAL
+              stepNo: 4
+              title: 넓은 개찰구
+              location: 개찰구 왼쪽 끝
+              note: null
+      responses:
+        '201':
+          description: 등록됨
+          headers:
+            Location:
+              description: 새 팁 주소
+              schema: { type: string, example: /api/tips/9 }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tip' }
+        '400':
+          description: 입력 오류 또는 정하지 않은 항목
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                validation:
+                  value:
+                    code: VALIDATION_FAILED
+                    message: 입력값을 확인하세요.
+                    errors:
+                      title: 1~80자로 입력하세요.
+                      location: 80자 이하로 입력하세요.
+                      note: 150자 이하로 입력하세요.
+                unknownField:
+                  value:
+                    code: INVALID_REQUEST_BODY
+                    message: 요청 본문을 읽을 수 없습니다.
+                    errors: { status: 허용하지 않는 항목입니다. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/tips/{id}:
+    get:
+      tags: [tips]
+      summary: 팁 하나 (POST의 Location이 가리키는 주소)
+      security: [{}, { bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TipId'
+      responses:
+        '200':
+          description: 팁
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tip' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/TipNotFound' }
+  /api/tips/{id}/status:
+    patch:
+      tags: [tips]
+      summary: 팁 상태 바꾸기 (S02·S06, 올린 사람만)
+      description: |
+        status를 바꾸고 verifiedAt을 지금으로 갱신한다. 같은 상태를 다시 보내도 200이며 verifiedAt만 갱신된다(작성자 재확인).
+        title·location·note·ownerId·createdAt은 바뀌지 않는다. 권한을 확인하기 전에는 값을 바꾸지 않는다.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TipId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TipStatusRequest' }
+            example: { status: OUTDATED }
+      responses:
+        '200':
+          description: 바뀐 팁
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tip' }
+        '400':
+          description: status 없음·허용하지 않는 값·정하지 않은 항목
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example:
+                code: VALIDATION_FAILED
+                message: 입력값을 확인하세요.
+                errors: { status: VERIFIED 또는 OUTDATED 중 하나를 보내세요. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: 올린 사람이 아님
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { code: FORBIDDEN, message: 이 팁을 올린 사람만 상태를 바꿀 수 있습니다., errors: {} }
+        '404': { $ref: '#/components/responses/TipNotFound' }
+  /api/me/tips:
+    get:
+      tags: [tips]
+      summary: 내가 올린 팁 (S06)
+      description: id 내림차순. 예시 팁(example=true)도 내 것이면 포함한다(앱에서 거를 수 있음).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: 내 팁 목록
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TipList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/signup:
+    post:
+      tags: [auth]
+      summary: 회원가입
+      description: 앱 화면에는 없다(계정 발급 방식 미정). 조회용 사용자 API가 없어 Location 헤더는 주지 않는다.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SignupRequest' }
+      responses:
+        '201':
+          description: 가입됨(비밀번호·해시는 응답하지 않음)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400':
+          description: 입력 오류
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example:
+                code: VALIDATION_FAILED
+                message: 입력값을 확인하세요.
+                errors:
+                  username: 소문자 영문·숫자·밑줄 4~24자로 입력하세요.
+                  password: 8자 이상, UTF-8 72바이트 이하로 입력하세요.
+        '409':
+          description: 이미 있는 username
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { code: USERNAME_TAKEN, message: 이미 사용 중인 아이디입니다., errors: { username: 이미 사용 중인 아이디입니다. } }
+  /api/auth/login:
+    post:
+      tags: [auth]
+      summary: 로그인 (S04)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+            example: { username: student01, password: '(표본 비밀번호)' }
+      responses:
+        '200':
+          description: 로그인 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '400':
+          description: 빈 아이디·비밀번호
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example:
+                code: VALIDATION_FAILED
+                message: 입력값을 확인하세요.
+                errors: { username: 아이디를 입력하세요., password: 비밀번호를 입력하세요. }
+        '401':
+          description: 아이디 또는 비밀번호가 맞지 않음(어느 쪽이 틀렸는지 알리지 않음)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { code: LOGIN_FAILED, message: 아이디 또는 비밀번호가 맞지 않아요., errors: {} }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'Authorization: Bearer <accessToken>. HS256, 발급자 skilltransfer-ch07, 1800초.'
+  parameters:
+    RoutePath:
+      name: route
+      in: path
+      required: true
+      schema: { type: string, enum: [EXPRESS, LOCAL, T2] }
+    TipId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+  responses:
+    Unauthorized:
+      description: 토큰 없음(보호된 API)·무효·만료·변조
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { code: UNAUTHORIZED, message: 로그인이 필요합니다., errors: {} }
+    TipNotFound:
+      description: 없는 팁 번호
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { code: NOT_FOUND, message: 팁을 찾을 수 없습니다., errors: {} }
+  schemas:
+    Text:
+      type: object
+      required: [en, ko]
+      properties:
+        en: { type: string }
+        ko: { type: string }
+    Lines:
+      type: object
+      required: [en, ko]
+      properties:
+        en: { type: array, items: { type: string } }
+        ko: { type: array, items: { type: string } }
+    Route:
+      type: object
+      required: [code, name, summary, available, stepCount]
+      properties:
+        code: { type: string, enum: [EXPRESS, LOCAL, T2] }
+        name: { $ref: '#/components/schemas/Text' }
+        summary: { $ref: '#/components/schemas/Text' }
+        available: { type: boolean, description: false면 '준비 중'(누르면 안내만) }
+        stepCount: { type: integer, minimum: 0 }
+    Step:
+      type: object
+      required: [stepNo, role, icon, photoKey, sign, title, instructions, elevator]
+      properties:
+        stepNo: { type: integer, minimum: 1 }
+        role:
+          type: string
+          enum: [HERE, FIND]
+          description: HERE = 지금 서 있는 곳(현재 위치), FIND = 찾을 표지판
+        icon: { type: string, enum: [PLANE, ESCALATOR, TRAIN] }
+        photoKey:
+          type: string
+          nullable: true
+          description: 앱에 들어 있는 사진 키(arrivals, expressConcourse, localConcourse, localPlatform). null이면 '사진 준비 중'.
+        sign:
+          type: object
+          description: 표지판 글자. 언어 전환과 관계없이 ko·en 병기.
+          required: [ko, en]
+          properties:
+            ko: { type: string }
+            en: { type: string }
+        title: { $ref: '#/components/schemas/Text' }
+        instructions:
+          allOf: [{ $ref: '#/components/schemas/Lines' }]
+          description: 행동 안내 줄 목록. '{ko|공항철도}'처럼 중괄호 안은 다른 언어로 읽을 부분(앱은 '|' 뒤 글자만 표시).
+        elevator:
+          allOf: [{ $ref: '#/components/schemas/Text' }]
+          nullable: true
+          description: 엘리베이터 위치. 현장 확인 전에는 null → 앱은 '엘리베이터: 현장 확인 중'.
+    Tip:
+      type: object
+      required: [id, route, stepNo, title, location, note, status, verifiedAt, createdAt, ownerId, mine, example]
+      properties:
+        id: { type: integer, format: int64, description: 서버가 정함 }
+        route: { type: string, enum: [EXPRESS, LOCAL] }
+        stepNo: { type: integer }
+        title: { type: string, description: 1~80 코드 포인트 }
+        location: { type: string, description: 1~80 코드 포인트 }
+        note: { type: string, nullable: true, description: 0~150 코드 포인트, 없으면 null }
+        status:
+          type: string
+          enum: [VERIFIED, OUTDATED]
+          description: VERIFIED = 작성자 확인, OUTDATED = 작성자가 오래됨 표시
+        verifiedAt:
+          type: string
+          format: date-time
+          description: 작성자가 마지막으로 상태를 정한 시각(UTC, 예 2026-10-20T03:00:00Z). 앱은 날짜만 표시.
+        createdAt: { type: string, format: date-time }
+        ownerId: { type: integer, format: int64, description: 올린 사용자 id. 서버가 토큰으로 정함 }
+        mine: { type: boolean, description: 요청한 토큰의 사용자가 올린 팁인지. 토큰이 없으면 false }
+        example: { type: boolean, description: 시드 예시 팁이면 true(앱은 '예시' 배지·작성자 '샘플'). 사용자가 올린 팁은 항상 false }
+    TipList:
+      type: object
+      required: [tips]
+      properties:
+        tips:
+          type: array
+          items: { $ref: '#/components/schemas/Tip' }
+    TipCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [route, stepNo, title, location]
+      properties:
+        route: { type: string, enum: [EXPRESS, LOCAL], description: S02에서 넘어온 값 }
+        stepNo: { type: integer, minimum: 1, description: 1~그 경로의 stepCount }
+        title: { type: string, description: 앞뒤 공백 제거 후 1~80 코드 포인트 }
+        location: { type: string, description: 앞뒤 공백 제거 후 1~80 코드 포인트 }
+        note: { type: string, nullable: true, description: 선택. 공백 제거 후 0~150 코드 포인트, 빈 값은 null }
+    TipStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, enum: [VERIFIED, OUTDATED] }
+    SignupRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username: { type: string, pattern: '^[a-z0-9_]{4,24}$' }
+        password: { type: string, description: 8자(코드 포인트) 이상, UTF-8 72바이트 이하 }
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+    User:
+      type: object
+      required: [id, username]
+      properties:
+        id: { type: integer, format: int64 }
+        username: { type: string }
+    LoginResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn, user]
+      properties:
+        accessToken: { type: string }
+        tokenType: { type: string, enum: [Bearer] }
+        expiresIn: { type: integer, example: 1800, description: 초 }
+        user: { $ref: '#/components/schemas/User' }
+    Error:
+      type: object
+      required: [code, message, errors]
+      properties:
+        code:
+          type: string
+          enum: [VALIDATION_FAILED, INVALID_REQUEST_BODY, UNAUTHORIZED, LOGIN_FAILED, FORBIDDEN, NOT_FOUND,
+                 USERNAME_TAKEN, METHOD_NOT_ALLOWED, UNSUPPORTED_MEDIA_TYPE, INTERNAL_ERROR]
+        message: { type: string, description: 사람이 읽는 한국어 안내 }
+        errors:
+          type: object
+          additionalProperties: { type: string }
+          description: 입력 항목 이름 → 안내 문구(S03 문구). 항목 오류가 없으면 {}.
