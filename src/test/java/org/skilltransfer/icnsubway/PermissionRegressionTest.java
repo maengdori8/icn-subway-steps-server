@@ -98,7 +98,7 @@ class PermissionRegressionTest extends ApiTestSupport {
     void unauthenticatedStatusChangeIs401AndNothingChanges() throws Exception {
         Map<String, Object> before = tipRow(8L);
         patchJson("/api/tips/8/status", null, body("status", "VERIFIED")).andExpect(status().isUnauthorized());
-        patchJson("/api/tips/8/status", expiredToken(STUDENT01), body("status", "VERIFIED")).andExpect(status().isUnauthorized());
+        patchJson("/api/tips/8/status", expiredToken(), body("status", "VERIFIED")).andExpect(status().isUnauthorized());
         assertThat(tipRow(8L)).isEqualTo(before);
     }
 

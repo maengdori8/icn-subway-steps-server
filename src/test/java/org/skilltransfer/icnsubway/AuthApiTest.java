@@ -108,7 +108,7 @@ class AuthApiTest extends ApiTestSupport {
     @Test
     void loginIgnoresStaleAuthorizationHeader() throws Exception {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/login")
-                        .header("Authorization", bearer(expiredToken(STUDENT01)))
+                        .header("Authorization", bearer(expiredToken()))
                         .contentType("application/json")
                         .content(toJson(body("username", "student01", "password", SAMPLE_PASSWORD))))
                 .andExpect(status().isOk());
@@ -133,21 +133,51 @@ class AuthApiTest extends ApiTestSupport {
         String unsigned = Base64.getUrlEncoder().withoutPadding().encodeToString("{\"alg\":\"none\"}".getBytes(StandardCharsets.UTF_8))
                 + "." + forgedPayload + ".";
         var otherKey = Keys.hmacShaKeyFor(new byte[32]);
+        var key = serverKey();
+        String iss = "skilltransfer-ch07";
         Instant now = Instant.now();
+        Instant later = now.plusSeconds(1800);
         String[] headers = {
                 "Basic c3R1ZGVudDAxOnN0dWR5LTEyMzQ=",
                 "Bearer ",
                 bearer(tampered),
                 bearer(swappedPayload),
                 bearer(unsigned),
-                bearer(token(otherKey, STUDENT01, "skilltransfer-ch07", now, now.plusSeconds(1800))),
-                bearer(token(serverKey(), STUDENT01, "someone-else", now, now.plusSeconds(1800))),
-                bearer(expiredToken(STUDENT01)),
-                bearer(token(serverKey(), 999_999L, "skilltransfer-ch07", now, now.plusSeconds(1800))) // 없는 사용자
+                bearer(token(otherKey, STUDENT01, "student01", iss, now, later)),       // 다른 키
+                bearer(token(key, STUDENT01, "student01", "someone-else", now, later)), // 발급자 다름
+                bearer(expiredToken()),                                                 // 만료
+                bearer(token(key, STUDENT01, "student01", iss, now, null)),             // exp 없음
+                bearer(token(key, 999_999L, "ghost", iss, now, later)),                 // 없는 사용자
+                bearer(token(key, STUDENT01, "student02", iss, now, later)),            // id와 이름이 다름
+                bearer(token(key, STUDENT01, "student01", iss, now.minusSeconds(864_000), later)) // 계정이 생기기 전에 발급
         };
         for (String h : headers) {
             getWith("/api/me/tips", h).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+            getWith("/api/routes", h).andExpect(status().isUnauthorized());
         }
+        // 대조군: 같은 방법으로 만든 정상 토큰은 통과한다(위 401이 다른 이유로 난 것이 아님)
+        getWith("/api/me/tips", bearer(token(key, STUDENT01, "student01", iss, now, later))).andExpect(status().isOk());
         getWith("/api/me/tips", bearer(good)).andExpect(status().isOk());
+    }
+
+    /** DB만 초기화하고 키를 남겨 같은 id가 다른 계정에 다시 배정돼도, 예전 토큰은 새 계정으로 인증되지 않는다. */
+    @Test
+    void oldTokenDoesNotAuthenticateReassignedUserId() throws Exception {
+        String oldName = uniqueName();
+        postJson("/api/auth/signup", null, body("username", oldName, "password", "pass-word-1")).andExpect(status().isCreated());
+        String oldToken = login(oldName, "pass-word-1");
+        Long id = jdbc.queryForObject("select id from app_user where username = ?", Long.class, oldName);
+
+        // 다른 이름으로 같은 id 재배정
+        jdbc.update("delete from app_user where id = ?", id);
+        jdbc.update("insert into app_user (id, username, password_hash, created_at) values (?, ?, ?, ?)",
+                id, uniqueName(), "x", java.sql.Timestamp.from(Instant.now()));
+        getWith("/api/me/tips", bearer(oldToken)).andExpect(status().isUnauthorized());
+
+        // 같은 이름이라도 토큰 발급 뒤에 새로 만든 계정이면 거절
+        jdbc.update("delete from app_user where id = ?", id);
+        jdbc.update("insert into app_user (id, username, password_hash, created_at) values (?, ?, ?, ?)",
+                id, oldName, "x", java.sql.Timestamp.from(Instant.now().plusSeconds(5)));
+        getWith("/api/me/tips", bearer(oldToken)).andExpect(status().isUnauthorized());
     }
 }

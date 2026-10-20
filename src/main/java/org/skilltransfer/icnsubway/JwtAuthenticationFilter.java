@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -61,9 +62,14 @@ class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = header.substring(BEARER.length()).trim();
         if (token.isEmpty()) return null;
         try {
-            long id = jwt.verify(token);
-            // DB를 초기화했는데 키는 남은 경우처럼, 없는 사용자의 토큰은 받지 않는다.
-            return users.findById(id).map(u -> new AuthUser(u.getId(), u.getUsername())).orElse(null);
+            JwtService.Verified v = jwt.verify(token);
+            // DB만 초기화하고 키를 남기면 id가 다른 사람에게 다시 배정될 수 있다.
+            // 그래서 id뿐 아니라 이름과 '계정이 생긴 뒤에 발급됐는지'까지 맞아야 받는다.
+            return users.findById(v.userId())
+                    .filter(u -> u.getUsername().equals(v.username()))
+                    .filter(u -> !v.issuedAt().isBefore(u.getCreatedAt().truncatedTo(ChronoUnit.SECONDS)))
+                    .map(u -> new AuthUser(u.getId(), u.getUsername()))
+                    .orElse(null);
         } catch (JwtException | IllegalArgumentException e) {
             return null;
         }

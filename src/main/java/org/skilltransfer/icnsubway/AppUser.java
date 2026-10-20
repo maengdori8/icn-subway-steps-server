@@ -31,4 +31,5 @@ public class AppUser {
     public Long getId() { return id; }
     public String getUsername() { return username; }
     public String getPasswordHash() { return passwordHash; }
+    public Instant getCreatedAt() { return createdAt; }
 }

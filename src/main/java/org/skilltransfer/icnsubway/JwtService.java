@@ -51,12 +51,22 @@ public class JwtService {
                 .compact();
     }
 
-    /** 서명·발급자·만료·알고리즘을 확인하고 사용자 id를 돌려준다. 실패하면 JwtException. */
-    public long verify(String token) {
+    /** 검증을 통과한 토큰의 내용. 필터가 DB 사용자와 다시 대조한다. */
+    public record Verified(long userId, String username, Instant issuedAt) {}
+
+    /**
+     * 서명·발급자·알고리즘·만료를 확인한다. JJWT는 exp가 있을 때만 만료를 보므로 exp·iat가 없는 토큰도 거절한다.
+     * 실패하면 JwtException.
+     */
+    public Verified verify(String token) {
         Jws<Claims> jws = Jwts.parser().verifyWith(key).requireIssuer(issuer).build().parseSignedClaims(token);
         if (!"HS256".equals(jws.getHeader().getAlgorithm())) throw new JwtException("unexpected algorithm");
+        Claims c = jws.getPayload();
+        if (c.getExpiration() == null || c.getIssuedAt() == null) throw new JwtException("exp and iat are required");
+        String username = c.get("username", String.class);
+        if (username == null) throw new JwtException("username is required");
         try {
-            return Long.parseLong(jws.getPayload().getSubject());
+            return new Verified(Long.parseLong(c.getSubject()), username, c.getIssuedAt().toInstant());
         } catch (NumberFormatException e) {
             throw new JwtException("bad subject");
         }

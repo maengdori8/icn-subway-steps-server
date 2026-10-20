@@ -134,7 +134,7 @@ class TipWriteTest extends ApiTestSupport {
     void createWithoutTokenIs401AndSavesNothing() throws Exception {
         int before = tipCount();
         postJson("/api/tips", null, tip("t", "l", null)).andExpect(status().isUnauthorized());
-        postJson("/api/tips", expiredToken(STUDENT01), tip("t", "l", null)).andExpect(status().isUnauthorized());
+        postJson("/api/tips", expiredToken(), tip("t", "l", null)).andExpect(status().isUnauthorized());
         // 401이 입력 오류보다 먼저다
         postJson("/api/tips", null, tip("", "", null)).andExpect(status().isUnauthorized());
         assertThat(tipCount()).isEqualTo(before);

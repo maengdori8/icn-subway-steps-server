@@ -130,7 +130,7 @@ class PublicReadTest extends ApiTestSupport {
     void publicGetWithInvalidOrExpiredTokenIs401() throws Exception {
         getWith("/api/routes", "Bearer not-a-jwt").andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED")).andExpect(jsonPath("$.errors").isMap());
-        getWith("/api/tips?route=LOCAL&step=4", bearer(expiredToken(STUDENT01))).andExpect(status().isUnauthorized());
-        getWith("/api/routes/EXPRESS/steps", bearer(expiredToken(STUDENT01))).andExpect(status().isUnauthorized());
+        getWith("/api/tips?route=LOCAL&step=4", bearer(expiredToken())).andExpect(status().isUnauthorized());
+        getWith("/api/routes/EXPRESS/steps", bearer(expiredToken())).andExpect(status().isUnauthorized());
     }
 }

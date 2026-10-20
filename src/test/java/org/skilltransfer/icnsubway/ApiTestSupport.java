@@ -119,14 +119,17 @@ abstract class ApiTestSupport {
         return Keys.hmacShaKeyFor(Base64.getDecoder().decode(Files.readString(Path.of("build/test-data/.jwt-secret")).trim()));
     }
 
-    static String token(SecretKey key, long subject, String issuer, Instant issuedAt, Instant expiresAt) {
-        return Jwts.builder().issuer(issuer).subject(String.valueOf(subject))
-                .issuedAt(Date.from(issuedAt)).expiration(Date.from(expiresAt))
-                .signWith(key, Jwts.SIG.HS256).compact();
+    /** 서버 발급 토큰과 같은 모양. 한 가지 값만 바꿔 그 실패만 시험할 수 있게 한다. expiresAt이 null이면 exp를 넣지 않는다. */
+    static String token(SecretKey key, long subject, String username, String issuer, Instant issuedAt, Instant expiresAt) {
+        var b = Jwts.builder().issuer(issuer).subject(String.valueOf(subject)).claim("username", username)
+                .issuedAt(Date.from(issuedAt));
+        if (expiresAt != null) b.expiration(Date.from(expiresAt));
+        return b.signWith(key, Jwts.SIG.HS256).compact();
     }
 
-    static String expiredToken(long subject) throws Exception {
-        Instant past = Instant.now().minusSeconds(7200);
-        return token(serverKey(), subject, "skilltransfer-ch07", past, past.plusSeconds(1800));
+    /** student01 토큰인데 이미 만료된 것. 계정이 생긴 뒤 발급된 것처럼 iat는 지금에 가깝게 둔다. */
+    static String expiredToken() throws Exception {
+        Instant now = Instant.now();
+        return token(serverKey(), STUDENT01, "student01", "skilltransfer-ch07", now, now.minusSeconds(1));
     }
 }
