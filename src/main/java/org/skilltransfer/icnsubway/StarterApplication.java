@@ -1,4 +1,4 @@
-package org.skilltransfer.lostfound;
+package org.skilltransfer.icnsubway;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication

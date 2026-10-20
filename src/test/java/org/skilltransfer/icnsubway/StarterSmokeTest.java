@@ -1,4 +1,4 @@
-package org.skilltransfer.lostfound;
+package org.skilltransfer.icnsubway;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
