@@ -1,0 +1,11 @@
+.gradle/
+build/
+.idea/
+data/
+uploads/
+.env
+.env.*
+*.log
+*.mv.db
+*.trace.db
+reports/raw/
