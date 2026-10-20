@@ -1,43 +1,36 @@
-# 7장 Claude Code 시작 프로젝트
+# ICN Subway Steps 서버
 
-이 폴더 전체를 내 서버 프로젝트 위치로 복사한다: C:\dev\chapter07-ai
-8·11·12장도 같은 폴더를 이어 쓴다. 완성 예제는 강사가 화면으로 보여 주는 비교 자료다. 학생 기본 배포에는 포함하지 않는다.
-Claude Desktop의 Code(Local, 이 폴더 선택) 또는 이 폴더에서 실행한 claude(CLI)로 연다.
-설치와 로그인은 2장 1.4·1.7을 따른다. 이 자료가 자동으로 로그인하거나 원격 작업 공간을 만들지는 않는다.
+인천공항 T1 입국장 → 서울역행 공항철도 탑승까지 단계 안내와 단계별 팁을 주는 API 서버.
+교재 7장 시작 프로젝트(분실물 API)를 복사해 경로·단계·팁 도메인으로 바꿨다. Spring Boot 4.1.1 · Java 21 · H2 파일 DB · JWT(HS256).
 
-첫 상태에는 GET / 와 GET /api/health만 있다. API·DB·JWT가 완성된 코드가 아니다.
-docs에는 입력 자료 requirements.md·S03-screen-spec.md·ui-handoff.md(제공 예)만 있다.
-5장에서 만든 내 S03-screen-spec.md·ui-handoff.md가 있으면 같은 이름으로 덮어 두고,
-5장 요구사항표(R01~)는 docs/requirements.md의 '기능 요구' 절에 옮겨 적는다(기술 조건 절은 그대로 둔다).
-P01에서 API 명세와 데이터 모델을, P02에서 인증 설계와 계획을 파일로 새로 쓴다.
-API·DB·JWT 설계 완성본은 처음부터 제공하지 않는다. P01·P02로 만든 문서를 사람이 확인한 뒤 구현한다.
+| 문서 | 내용 |
+| --- | --- |
+| docs/api-spec.yaml | API 계약(OpenAPI 3.0.3). 앱 연결의 기준 |
+| docs/data-model.md | 테이블·제약·시드·초기화 방법·검토 메모 |
+| docs/auth-design.md | 비밀번호·JWT·키 보관·401/403 |
+| docs/requirements.md | 기능 요구(R01~R06, R08)와 수업 기술 조건 |
+| docs/verification-plan.md / reports/verification.md | 검사 계획 / 실제 결과 |
+| reports/change-review.md | 바뀐 파일·Codex 반박 판정·남은 문제·인계 |
+| docs/ui-*.csv, S02·S03-screen-spec.md, ui-handoff.md, ui-validation-decisions.md | 5장 입력(C:\dev\chapter05-ai\docs에서 복사, 수정하지 않음) |
 
-## 먼저 실행
-PowerShell에서 JDK 21을 지정한다. 아래 경로는 자신이 설치한 경로로 맞춘다.
+## 실행
 
-    $env:JAVA_HOME='C:\dev\jdk-21'
+PowerShell에서:
+
+    $env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot'
     $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
     java -version
-    .\gradlew.bat test bootJar
+    .\gradlew.bat test
     .\gradlew.bat bootRun
 
-java -version에 21이 보여야 한다. http://127.0.0.1:8097/api/health 에 status UP이 보이면 시작 프로젝트가 실행된 것이다.
-종료는 그 서버 창의 Ctrl+C다. 같은 8097의 완성 예제 서버와 동시에 실행하지 않는다.
-첫 Gradle 실행은 의존성 다운로드가 필요할 수 있다. --offline은 필요한 캐시가 준비되어 있을 때만 사용한다.
+- http://127.0.0.1:8097/api/health 에 status UP이 보이면 실행된 것이다. 종료는 그 창의 Ctrl+C.
+- H2 콘솔이 필요하면 bootRun 전에 `$env:SPRING_PROFILES_ACTIVE='dev'`. 주소 http://127.0.0.1:8097/h2-console, JDBC URL `jdbc:h2:file:./data/icn-subway`, 사용자 sa, 비밀번호 없음.
+- 처음 실행하면 data/icn-subway.mv.db(DB)와 data/.jwt-secret(JWT 키)이 생긴다. 둘 다 Git에서 빠진다.
+  DB를 처음 상태로 돌리려면 서버를 끄고 data/icn-subway.mv.db를 지운다(시드가 다시 들어간다).
+- 표본 계정 student01·student02, 비밀번호는 docs/requirements.md의 공개 표본 값(로컬 실습 전용).
 
-Claude Desktop의 Code에서 Claude가 gradlew를 실행하면 위 PowerShell 창의 $env:JAVA_HOME은 전달되지 않는다.
-Windows 사용자 환경 변수 JAVA_HOME을 JDK 21로 등록(3장)한 뒤 Desktop을 완전히 끄고 다시 켜거나,
-Code 탭에서 Local 위에 마우스를 올리면 나오는 톱니(로컬 환경 편집기)에 JAVA_HOME을 넣는다. CLI는 JAVA_HOME을 지정한 같은 창에서 claude를 실행한다.
-CLAUDE.md의 'JDK 21 경로' 줄도 내 경로로 고친다.
+## 앱(Flutter)에서 연결
 
-## Git으로 시작 상태 기록
-이 폴더에서 git init으로 로컬 저장소를 만들고 작성자를 git config --local로 정한 뒤(값은 강사 안내), 요청문 하나를 마칠 때마다 커밋한다(7장 배포 폴더의 003_변경기록안내.md).
-강사가 Gitea 저장소를 배정했을 때만 3장 7.5 절차로 remote를 추가하고 push한다.
-DB·키·실행 로그는 .gitignore로 빠진다. build.gradle과 reports의 기록 파일은 커밋한다.
-
-## 단계마다 확인
-P00→P01→P02→P03→P04→P05→P06→P07 순서다. P08은 선택이다.
-P04에서 회원가입·로그인·JWT 필터까지 완성한 뒤 P05의 쓰기 API를 만든다.
-인증 전에 권한 검사를 주석 처리하지 않는다. 처음에는 쓰기 처리기가 없으므로 물건을 변경할 수 없다.
-실행 명령과 실패 결과는 reports에 남기고 AI에게 필요한 부분만 보여 준다.
-git status --short와 git diff -- src build.gradle docs를 읽어 변경한 파일을 확인한다.
+- 기본 주소: PC에서는 http://127.0.0.1:8097, Android 에뮬레이터에서는 http://10.0.2.2:8097. 서버가 127.0.0.1에만 열려 있어 실제 휴대폰은 접속할 수 없다.
+- 로그인 응답의 accessToken을 `Authorization: Bearer <accessToken>` 헤더로 보낸다. 1800초 뒤 만료되면 401 → 다시 로그인.
+- 응답 필드는 camelCase다. 자세한 내용은 docs/api-spec.yaml과 reports/change-review.md의 '앱 연결' 절.

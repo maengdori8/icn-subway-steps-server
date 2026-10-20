@@ -13,6 +13,9 @@
 | 1 | 37개 통과 | 0 | AuthApiTest 10, PermissionRegressionTest 6, PublicReadTest 11, TipWriteTest 9, StarterSmokeTest 1 |
 | 변이 확인 | 1개 실패(의도) | 1 | TipService의 올린 사람 비교를 `if (false)`로 바꾸자 `otherUserGets403AndNothingChanges` 실패 → 테스트가 권한 누락을 잡음. 원래 코드로 되돌림 |
 | 2 | 39개 통과 | 0 | 아래 실패 수정 뒤 DevProfileTest 1, PublicReadTest의 H2 콘솔 꺼짐 검사 1 추가 |
+| 3 | 40개 통과 | 0 | Codex 반박 반영(토큰-계정 대조, exp 필수) 뒤. `oldTokenDoesNotAuthenticateReassignedUserId` 추가, badTokensAre401에 exp·iat·username 없음, 이름 불일치, 계정 생성 전 발급 추가 |
+| 변이 확인 2 | 2개 실패(의도) | 1 | 필터의 username·iat 대조와 exp 필수 검사를 빼자 위 두 테스트 실패 → 원래 코드로 되돌림 |
+| 4 | 40개 통과 | 0 | Codex 2차 지적으로 iat·username 없는 토큰 사례를 badTokensAre401에 추가 |
 
 검사 계획(docs/verification-plan.md) V01~V37을 모두 테스트로 옮겼다. 테스트는 메모리 DB `jdbc:h2:mem:icn-test`와 build/test-data/.jwt-secret을 쓴다.
 

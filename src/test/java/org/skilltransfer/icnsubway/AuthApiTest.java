@@ -147,6 +147,10 @@ class AuthApiTest extends ApiTestSupport {
                 bearer(token(key, STUDENT01, "student01", "someone-else", now, later)), // 발급자 다름
                 bearer(expiredToken()),                                                 // 만료
                 bearer(token(key, STUDENT01, "student01", iss, now, null)),             // exp 없음
+                bearer(Jwts.builder().issuer(iss).subject("101").claim("username", "student01")
+                        .expiration(java.util.Date.from(later)).signWith(key, Jwts.SIG.HS256).compact()), // iat 없음
+                bearer(Jwts.builder().issuer(iss).subject("101").issuedAt(java.util.Date.from(now))
+                        .expiration(java.util.Date.from(later)).signWith(key, Jwts.SIG.HS256).compact()), // username 없음
                 bearer(token(key, 999_999L, "ghost", iss, now, later)),                 // 없는 사용자
                 bearer(token(key, STUDENT01, "student02", iss, now, later)),            // id와 이름이 다름
                 bearer(token(key, STUDENT01, "student01", iss, now.minusSeconds(864_000), later)) // 계정이 생기기 전에 발급

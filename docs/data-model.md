@@ -130,7 +130,7 @@ H2 시퀀스는 값을 32개씩 미리 잡아 두므로 서버를 강제로 끄�
 
 | 대상 | 위치 | 보존 | 초기화 |
 | --- | --- | --- | --- |
-| DB | data/icn-subway.mv.db | 재시작해도 유지 | 서버를 끄고 data/icn-subway.mv.db(와 .trace.db)를 지우면 다음 실행에 시드부터 다시 |
+| DB | data/icn-subway.mv.db | 재시작해도 유지 | 서버를 끄고 data/icn-subway.mv.db(와 .trace.db)를 지우면 다음 실행에 시드부터 다시. 키를 남겨도 예전 토큰은 401(계정 생성 시각이 토큰보다 뒤가 되므로, docs/auth-design.md) |
 | JWT 키 | data/.jwt-secret (Base64, 32바이트 난수) | 재시작해도 같은 키 → 발급한 토큰 유지 | 파일을 지우면 새 키가 생기고 기존 토큰은 모두 401 |
 | 환경 변수 JWT_SECRET | 실행 창 | 설정하면 파일보다 우선(Base64, 32바이트 이상) | 값을 바꾸면 기존 토큰 401 |
 

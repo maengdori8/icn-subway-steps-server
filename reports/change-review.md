@@ -1,0 +1,73 @@
+# 변경 정리와 인계 · ICN Subway Steps 서버
+
+문서 정보: 2026-10-20 · 작성 Claude Code · 기준 커밋 146b091(7장 시작 프로젝트 복사) 이후 전체
+
+## 바뀐 파일과 이유
+
+| 파일 | 이유 |
+| --- | --- |
+| settings.gradle, CLAUDE.md, README.md, 패키지 lostfound → icnsubway | 분실물 예제를 내 앱 프로젝트로 바꿈 |
+| docs/ui-*.csv, screen-flow.csv, S02·S03-screen-spec.md, ui-handoff.md, ui-validation-decisions.md | 5장 입력 복사(원본 C:\dev\chapter05-ai\docs, 수정 안 함) |
+| docs/requirements.md | 기능 요구 R01~R06·R08, 기술 조건·시드를 내 앱 기준으로 |
+| docs/api-spec.yaml, docs/data-model.md | P01: API 계약, 테이블·시드·검토 메모 |
+| docs/auth-design.md, docs/verification-plan.md | P02: 인증 설계, 검사 계획 |
+| build.gradle | data-jpa, security, h2console, H2 2.4.240, JJWT 0.13.0 추가 |
+| src/main/resources/application*.properties | H2 파일 DB, JSON 엄격 읽기·UTF-8, JWT 설정, dev만 H2 콘솔 |
+| src/main/java/.../AppUser·Route·RouteStep·Tip, *Repository | Entity와 조회 |
+| RouteService·RouteController | 경로·단계 공개 조회 |
+| TipService·TipController | 팁 조회(mine)·등록·상태 변경(올린 사람만)·내 팁 |
+| AuthService·AuthController, JwtService, JwtAuthenticationFilter, SecurityConfig, AuthUser | 가입·로그인·JWT·접근 규칙 |
+| ApiError·ApiException·ApiAdvice, TextRules, Requests·Responses | 오류 형식, 입력 규칙, DTO |
+| SeedData | 시안 v03 ROUTES 문구(초안)·표본 계정·팁 7·8 |
+| src/test/... (6개 클래스, 40개) | 공개 조회·인증·팁 등록·권한 회귀·dev 프로필 |
+| reports/verification.md | 실제 테스트·HTTP·재시작 확인 결과 |
+
+## Codex 반박 판정
+
+1차는 기준 146b091 이후 전체(`/codex:adversarial-review --base 146b091`), 2차는 수정 커밋만(`--base a0b0bb5`).
+
+| # | 지적 (Codex 심각도) | 판정 | 이유 | 조치 |
+| --- | --- | --- | --- | --- |
+| 1 | DB만 초기화하면 시퀀스가 103부터 다시 시작해, 예전 토큰이 같은 id의 새 계정으로 인증된다 (높음) | 수용 | 필터가 id 존재만 확인하는 것을 코드로 확인. data-model.md가 키를 남긴 DB 초기화를 안내하고 있었음 | 토큰의 username과 iat(계정 생성 이후 발급)를 DB 사용자와 대조. 회귀 테스트 `oldTokenDoesNotAuthenticateReassignedUserId` 추가, 검사를 빼면 실패하는 것 확인 |
+| 2 | exp 없는 토큰을 허용한다(JJWT는 exp가 있을 때만 검사) (중간) | 수용 | verify가 exp를 요구하지 않음을 확인. 서버 발급 토큰엔 항상 있으나 auth-design의 만료 계약 위반 | exp·iat·username 없는 토큰 거절, 테스트 추가 |
+| 3 | (2차) 같은 초 안에 같은 id·같은 이름으로 계정이 다시 만들어지면 예전 토큰이 통과한다 (높음) | 기각 | 재현 경로가 없다: 사용자 삭제 API가 없고, DB 초기화는 서버를 끄고 파일을 지운 뒤 다시 켜야 해 토큰 발급과 같은 초에 새 계정이 생길 수 없다. 서버 한 대·로컬 전용 범위 | 코드 변경 없음. 여러 서버가 JWT_SECRET을 공유하는 배포로 바뀌면 계정마다 난수 세대 값을 저장해 토큰에 넣는 방식으로 강화(아래 '남은 문제' 5) |
+| 4 | (2차) iat·username 누락 토큰 회귀 테스트가 없다 | 수용 | 테스트 목록에 없었음 | badTokensAre401에 두 경우 추가 |
+
+Codex가 동의한 부분: 상태 변경의 입력→404→소유자 비교→변경 순서와 권한 확인 전 값 불변, 유니코드 공백 제거·코드 포인트 길이·note 빈 값 null, 공개 GET 무효 토큰 401과 /api/auth/** 헤더 무시.
+팀 규칙상 Codex 리뷰는 2회까지 받았다. 그 뒤의 변경은 테스트 2건 추가뿐이다.
+
+## 남은 문제
+
+1. **앱 모델과 서버 JSON 이름이 다르다.** Flutter 앱(C:\dev\projects\icn_subway_app, 읽기만 함)은 ui-handoff 후보대로 snake_case(step_no, owner_id, verified_at, is_example)와 `GET /api/tips/mine`을 가정했다. 서버는 상위 세션 지시대로 camelCase와 `GET /api/me/tips`다. 단계·경로 JSON 모양도 다르다(아래 '앱 연결'). 10장 연결 전에 한쪽으로 맞춰야 한다.
+2. 단계 문구·표지판·층수는 현장 확인 전 초안이다. 엘리베이터는 모두 null.
+3. 회원가입은 API에만 있고 앱 화면에는 없다(계정 발급 방식 미정).
+4. 오류 문구는 한국어 한 가지. 앱이 errors의 키로 자기 번역 문구를 보여야 한다.
+5. 토큰-계정 대조는 username·발급 시각 기준이다. 여러 서버가 키를 공유하게 되면 계정별 난수 세대 값으로 강화.
+6. CORS 미설정(Flutter 웹에서 부르면 막힘), 서버는 127.0.0.1에만 열림(실제 휴대폰 불가).
+7. 교재 CLAUDE.md는 "서버는 사람이 켜고 끈다"고 하지만, 이번에는 상위 세션 지시로 Claude가 bootRun을 켜고 확인 뒤 껐다.
+
+## 앱 연결 (Flutter 세션이 알아야 할 것)
+
+- 기본 URL: PC `http://127.0.0.1:8097`, Android 에뮬레이터 `http://10.0.2.2:8097`.
+- 로그인 `POST /api/auth/login` → `{accessToken, tokenType:"Bearer", expiresIn:1800, user:{id, username}}`. 이후 `Authorization: Bearer <accessToken>`.
+  무효·만료 토큰은 공개 GET에서도 401이므로, 401이면 저장한 토큰을 버리고 다시 로그인(또는 익명 재요청).
+- 응답 `Content-Type: application/json;charset=UTF-8`. 오류는 `{code, message, errors}`.
+- 응답 필드(camelCase):
+  - 경로: `code, name{en,ko}, summary{en,ko}, available, stepCount`
+  - 단계: `stepNo, role(HERE|FIND), icon(PLANE|ESCALATOR|TRAIN), photoKey|null, sign{ko,en}, title{en,ko}, instructions{en[],ko[]}, elevator{en,ko}|null`
+  - 팁: `id, route, stepNo, title, location, note|null, status(VERIFIED|OUTDATED), verifiedAt, createdAt(ISO UTC), ownerId, mine, example`
+  - 팁 등록 본문: `route, stepNo, title, location, note` (다른 항목이 있으면 400)
+- 지금 Flutter 모델과 다른 점: snake_case 키, 경로의 origin·sign 없음, 단계의 sign이 객체·actions 대신 instructions·photo_url/photo_credit 대신 photoKey·elevator_status 대신 elevator, verifiedAt이 날짜가 아닌 ISO 시각, is_example 대신 example, 내 팁 주소.
+  자세한 표: 공유 노트 폴더의 server-api-for-flutter.md.
+
+## 8장이 읽을 경로
+
+| 무엇 | 경로 |
+| --- | --- |
+| API 명세 | docs/api-spec.yaml |
+| 인증 설계 | docs/auth-design.md |
+| 데이터 모델·시드 | docs/data-model.md |
+| 검사 계획 | docs/verification-plan.md |
+| 실행 기록 | reports/verification.md |
+| 실행 주소 | http://127.0.0.1:8097 (`.\gradlew.bat bootRun`, H2 콘솔은 SPRING_PROFILES_ACTIVE=dev) |
+| 테스트 | src/test/java/org/skilltransfer/icnsubway/ (`.\gradlew.bat test`) |
