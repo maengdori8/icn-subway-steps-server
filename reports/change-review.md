@@ -38,7 +38,7 @@ Codex가 동의한 부분: 상태 변경의 입력→404→소유자 비교→�
 
 ## 남은 문제
 
-1. **앱 모델과 서버 JSON 이름이 다르다.** Flutter 앱(C:\dev\projects\icn_subway_app, 읽기만 함)은 ui-handoff 후보대로 snake_case(step_no, owner_id, verified_at, is_example)와 `GET /api/tips/mine`을 가정했다. 서버는 상위 세션 지시대로 camelCase와 `GET /api/me/tips`다. 단계·경로 JSON 모양도 다르다(아래 '앱 연결'). 10장 연결 전에 한쪽으로 맞춰야 한다.
+1. **앱 모델과 서버 JSON 이름이 다르다 → 결정(2026-10-21, 사용자): 서버 계약을 유지하고 앱이 맞춘다.** Flutter 앱(C:\dev\projects\icn_subway_app)은 ui-handoff 후보대로 snake_case(step_no, owner_id, verified_at, is_example)와 `GET /api/tips/mine`을 가정했다. 서버는 camelCase와 `GET /api/me/tips`를 그대로 두고, Flutter 세션(icn-app)이 모델의 fromJson·toJson과 내 팁 주소를 docs/api-spec.yaml에 맞춘다(아래 '앱 연결').
 2. 단계 문구·표지판·층수는 현장 확인 전 초안이다. 엘리베이터는 모두 null.
 3. 회원가입은 API에만 있고 앱 화면에는 없다(계정 발급 방식 미정).
 4. 오류 문구는 한국어 한 가지. 앱이 errors의 키로 자기 번역 문구를 보여야 한다.
