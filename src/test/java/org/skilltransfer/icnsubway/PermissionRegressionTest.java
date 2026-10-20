@@ -1,0 +1,123 @@
+package org.skilltransfer.icnsubway;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import com.jayway.jsonpath.JsonPath;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+
+/** V30~V37: 상태 변경·내 팁. 실패한 요청 뒤에는 DB 행과 팁 개수가 그대로인지 다시 본다. */
+class PermissionRegressionTest extends ApiTestSupport {
+
+    @Test
+    void ownerChangesStatusAndVerifiedAtIsRefreshed() throws Exception {
+        String a = student01();
+        long id = createTip(a, "EXPRESS", 4, "Gate tip");
+        jdbc.update("update tip set verified_at = ? where id = ?", Timestamp.from(Instant.parse("2020-01-01T00:00:00Z")), id);
+        Map<String, Object> before = tipRow(id);
+
+        String res = text(patchJson("/api/tips/" + id + "/status", a, body("status", "OUTDATED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OUTDATED"))
+                .andExpect(jsonPath("$.title").value("Gate tip"))
+                .andExpect(jsonPath("$.mine").value(true)));
+        Instant changedAt = Instant.parse(JsonPath.read(res, "$.verifiedAt"));
+        assertThat(changedAt).isAfter(Instant.parse("2026-01-01T00:00:00Z"));
+
+        Map<String, Object> after = tipRow(id);
+        assertThat(after.get("STATUS")).isEqualTo("OUTDATED");
+        for (String col : List.of("TITLE", "LOCATION", "NOTE", "OWNER_ID", "CREATED_AT", "ROUTE_CODE", "STEP_NO", "EXAMPLE")) {
+            assertThat(after.get(col)).as(col).isEqualTo(before.get(col));
+        }
+
+        patchJson("/api/tips/" + id + "/status", a, body("status", "VERIFIED")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("VERIFIED"));
+        // 같은 상태를 다시 보내도 200 (작성자 재확인)
+        patchJson("/api/tips/" + id + "/status", a, body("status", "VERIFIED")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("VERIFIED"));
+        getWith("/api/tips/" + id, null).andExpect(jsonPath("$.status").value("VERIFIED"));
+    }
+
+    @Test
+    void otherUserGets403AndNothingChanges() throws Exception {
+        String a = student01();
+        String b = student02();
+        long verifiedTip = createTip(a, "EXPRESS", 5, "Platform tip");
+        long outdatedTip = createTip(a, "EXPRESS", 5, "Old platform tip");
+        patchJson("/api/tips/" + outdatedTip + "/status", a, body("status", "OUTDATED")).andExpect(status().isOk());
+
+        int count = tipCount();
+        for (long id : new long[] {verifiedTip, outdatedTip, 8L}) {
+            Map<String, Object> before = tipRow(id);
+            for (String next : new String[] {"VERIFIED", "OUTDATED"}) {
+                patchJson("/api/tips/" + id + "/status", b, body("status", next))
+                        .andExpect(status().isForbidden())
+                        .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                        .andExpect(jsonPath("$.message").value("이 팁을 올린 사람만 상태를 바꿀 수 있습니다."));
+            }
+            assertThat(tipRow(id)).isEqualTo(before);
+        }
+        assertThat(tipCount()).isEqualTo(count);
+    }
+
+    @Test
+    void invalidStatusBodiesAre400AndNothingChanges() throws Exception {
+        String a = student01();
+        long id = createTip(a, "LOCAL", 5, "Board tip");
+        Map<String, Object> before = tipRow(id);
+        for (Object payload : new Object[] {body("status", "DELETED"), body("status", "verified"), body(), body("status", null)}) {
+            patchJson("/api/tips/" + id + "/status", a, payload)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors.status").value("VERIFIED 또는 OUTDATED 중 하나를 보내세요."));
+        }
+        patchJson("/api/tips/" + id + "/status", a, body("status", "OUTDATED", "title", "changed"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"))
+                .andExpect(jsonPath("$.errors.title").exists());
+        patchJson("/api/tips/" + id + "/status", a, "").andExpect(status().isBadRequest());
+        assertThat(tipRow(id)).isEqualTo(before);
+    }
+
+    @Test
+    void missingTipIs404AndOrderIs401Then400Then404Then403() throws Exception {
+        String a = student01();
+        String b = student02();
+        patchJson("/api/tips/999999/status", a, body("status", "OUTDATED"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
+        patchJson("/api/tips/999999/status", null, body("status", "WRONG")).andExpect(status().isUnauthorized());
+        patchJson("/api/tips/999999/status", a, body("status", "WRONG")).andExpect(status().isBadRequest());
+        patchJson("/api/tips/8/status", b, body("status", "WRONG")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void unauthenticatedStatusChangeIs401AndNothingChanges() throws Exception {
+        Map<String, Object> before = tipRow(8L);
+        patchJson("/api/tips/8/status", null, body("status", "VERIFIED")).andExpect(status().isUnauthorized());
+        patchJson("/api/tips/8/status", expiredToken(STUDENT01), body("status", "VERIFIED")).andExpect(status().isUnauthorized());
+        assertThat(tipRow(8L)).isEqualTo(before);
+    }
+
+    @Test
+    void myTipsListsOnlyMine() throws Exception {
+        String a = student01();
+        long newer = createTip(a, "LOCAL", 1, "Mine 1");
+        long newest = createTip(a, "EXPRESS", 2, "Mine 2");
+        String res = text(getWith("/api/me/tips", bearer(a))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tips[*].ownerId").value(everyItem(is(101))))
+                .andExpect(jsonPath("$.tips[*].mine").value(everyItem(is(true))))
+                .andExpect(jsonPath("$.tips[*].id").value(hasItems((int) newest, (int) newer, 8)))
+                .andExpect(jsonPath("$.tips[*].id").value(not(hasItem(7)))));
+        List<Integer> ids = JsonPath.read(res, "$.tips[*].id");
+        assertThat(ids).isSortedAccordingTo((x, y) -> Integer.compare(y, x));
+
+        getWith("/api/me/tips", bearer(student02()))
+                .andExpect(jsonPath("$.tips[?(@.id == 7)].example").value(contains(true)));
+        getWith("/api/me/tips", bearer(newUserToken())).andExpect(status().isOk()).andExpect(jsonPath("$.tips.length()").value(0));
+    }
+}
