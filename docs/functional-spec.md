@@ -64,8 +64,9 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
 - **요청:** GET /api/routes/{route}/steps. 경로 코드는 대소문자를 구분한다.
 - **서버 처리:**
   - 그 경로의 route_step을 step_no 순서로 준다.
-  - 준비 중 경로는 200과 빈 steps를 준다. 없는 코드는 404다.
+  - 준비 중 경로는 200과 빈 steps를 준다. 서버가 available을 보고 막는 것이 아니라 T2에 route_step 행이 없어서다(T2를 열 때 행을 넣고 available을 true로 바꾼다). 없는 코드는 404다.
   - instructions는 DB에 줄바꿈으로 이어 저장한 값을 배열로 나눠서 준다.
+  - elevator는 elevator_en·elevator_ko가 둘 다 있을 때만 {en, ko}로 준다. 한쪽만 채운 행은 null로 준다. 한쪽이 null인 객체를 주면 앱이 응답을 읽지 못해 그 경로의 S02 전체가 '불러오지 못했어요'가 되기 때문이다.
 - **응답:** {route, steps:[{stepNo, role, icon, photoKey, sign{ko,en}, title{en,ko}, instructions{en[],ko[]}, elevator}]}
 - **화면:**
   - 'n/N' 진행 표시, 4:3 사진, 역할 라벨이 붙은 표지판 칩(HERE=현재 위치, FIND=찾을 표지판), 제목, 행동 안내 줄을 보인다.
@@ -77,7 +78,7 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
     - photoKey가 null이면 '사진 준비 중'을 보인다.
     - 사진 파일과 출처는 앱 안 표(photoKey → 파일·출처)에서 찾는다. 서버는 사진 파일을 주지 않는다.
     - 사진 키는 arrivals, expressConcourse, localConcourse, localPlatform 네 개다.
-  - 엘리베이터: elevator가 null이면 '엘리베이터: 현장 확인 중'을 보인다.
+  - 엘리베이터: elevator가 null이면 '엘리베이터: 현장 확인 중'을 보인다(두 언어 중 한쪽만 채운 단계도 같다).
   - 안내 문구 속 `{ko|공항철도}`는 다른 언어로 읽을 부분이다. 앱은 '|' 뒤 글자만 보이고, 그 조각에 언어 표시를 단다.
 - **실패:** 화면 전체에 안내와 다시 시도를 보인다. 404(없는 경로 코드)도 지금은 같은 안내다. 앱은 S01 목록에 있는 코드만 보내므로 정상 사용에서는 생기지 않는다.
 - **DB:** route_step(route_code, step_no, role, icon, photo_key, sign_ko, sign_en, title_en, title_ko, instructions_en, instructions_ko, elevator_en, elevator_ko)
@@ -129,7 +130,9 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
   | location | 예 | 1~80자 | 사용자 |
   | note | 아니요 | 0~150자, 빈 값은 null | 사용자 |
 
-  다른 항목(status, ownerId, verifiedAt, id 등)을 보내면 서버는 400 INVALID_REQUEST_BODY로 거절한다.
+  - 다른 항목(status, ownerId, verifiedAt, id 등)을 보내면 서버는 400 INVALID_REQUEST_BODY로 거절한다.
+  - 자료형도 계약대로만 받는다. stepNo는 JSON 정수, title·location·note는 문자열(note는 null도 됨)이다. stepNo 3.7이나 "3", 숫자·불리언 title을 보내면 바꿔 저장하지 않고 400 INVALID_REQUEST_BODY(errors.{항목} '형식이 맞지 않습니다.')다.
+  - '앞뒤 공백'은 유니코드 White_Space 문자와 U+FEFF다(앱의 Dart trim()과 같은 범위, 자세한 목록은 data-model.md tip 절).
 - **서버 처리:**
   1. 토큰을 확인한다.
   2. 입력 규칙을 검사한다.
@@ -242,23 +245,28 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
 
 | 화면 | 화면 요소 | 기능 | API 필드 | DB 열 |
 | --- | --- | --- | --- | --- |
-| S01 | 경로 카드 이름·보조 문구 | F01 | name.en/ko, summary.en/ko | route.name_*, summary_* |
+| S01 | 경로 카드 순서 | F01 | routes 배열 순서 | route.sort_order |
+| S01 | 경로 카드 이름·보조 문구 | F01 | name.en/ko, summary.en/ko | route.name_*, summary_* (T2 카드 설명은 앱 문구, 6절) |
 | S01 | 단계 수, 준비 중 | F01 | stepCount, available | route_step 개수, route.available |
 | S01 | 이어 보기 'n/N' | F03 | — | 기기 저장 |
-| S02 | 진행 'n/N' | F02 | stepNo, 목록 길이 | route_step.step_no |
+| S02 | 진행 'n/N' | F02 | stepNo, 목록 길이 | route_step.step_no, route_step 개수 |
 | S02 | 사진 | F02 | photoKey | route_step.photo_key |
 | S02 | 역할 라벨 + 표지판 칩 | F02 | role, sign.ko/en | route_step.role, sign_ko, sign_en |
+| S02 | 표지판 픽토그램 | F02 | icon | route_step.icon |
 | S02 | 제목·행동 안내 | F02 | title, instructions | route_step.title_*, instructions_* |
-| S02 | 엘리베이터 줄 | F02 | elevator | route_step.elevator_* |
+| S02 | 전체 단계 목록(펼치기) | F02 | steps[].stepNo, title | route_step.step_no, title_* |
+| S02 | 엘리베이터 줄 | F02 | elevator | route_step.elevator_en·elevator_ko(둘 다 있을 때만) |
 | S02 | 팁 카드 제목·위치·메모 | F04 | title, location, note | tip.title, location, note |
 | S02 | 배지·날짜 | F04 | status, verifiedAt, example | tip.status, verified_at, example |
+| S02 | 작성자 표시 '샘플'·'내가 올림'·'여행객' | F04 | example, mine | tip.example, tip.owner_id(토큰과 비교) |
 | S02 | '내가 올림'·상태 버튼 | F04·F07 | mine, id | tip.owner_id(토큰과 비교) |
-| S03 | 경로·단계 요약 줄 | F05 | route, stepNo | tip.route_code, step_no |
+| S02 | '지난 팁 n개' 접힌 묶음 | F04 | status | tip.status(OUTDATED 개수) |
+| S03 | 경로·단계 요약 줄('직통열차 · 5단계 중 3단계 — 단계 제목') | F05 | 경로 name(GET /api/routes), stepNo, 단계 목록 길이, 단계 title | route.name_*, route_step 개수, route_step.title_* (보낼 때는 tip.route_code, step_no) |
 | S03 | 제목·위치·메모 칸 | F05 | title, location, note | tip.title, location, note |
 | S04 | 아이디·비밀번호 | F06 | username, password | app_user.username, password_hash |
 | S05 | 로그인됨 이름 | F06·F09 | user.username | app_user.username |
 | S05 | 테마·언어·사진 출처 | F09 | — | 기기 저장 / 앱 안 표 |
-| S06 | 내 팁 목록 | F08 | Tip 전체 | tip(owner_id) |
+| S06 | 내 팁 목록('직통열차 · 5단계 중 3단계', 배지, 상태 버튼) | F08 | Tip 전체 + GET /api/routes의 name·stepCount | tip(owner_id), route.name_*, route_step 개수 |
 
 ## 4. 상태와 권한 규칙
 
@@ -281,8 +289,8 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
 
 | code | 상태 | 생기는 기능 | 앱 처리 |
 | --- | --- | --- | --- |
-| VALIDATION_FAILED | 400 | F04·F05·F06·F07·F10, 숫자가 아닌 step·경로 변수(예 step=abc) | F05는 errors 키별 칸 오류, 나머지는 일반 실패 안내 |
-| INVALID_REQUEST_BODY | 400 | F05·F06·F07·F10(읽을 수 없는 JSON, 정하지 않은 항목) | 앱 결함. 일반 실패 안내 |
+| VALIDATION_FAILED | 400 | F04·F05·F06·F07·F10, 숫자가 아닌 step·경로 변수(예 step=abc, /api/tips/abc, /api/tips/1.5, long 범위를 넘는 id는 errors.id) | F05는 errors 키별 칸 오류, 나머지는 일반 실패 안내 |
+| INVALID_REQUEST_BODY | 400 | F05·F06·F07·F10(읽을 수 없는 JSON, 정하지 않은 항목, 자료형이 다른 값: stepNo 3.7·"3", 숫자 title, status 1 등) | 앱 결함. 일반 실패 안내 |
 | BAD_REQUEST | 원래 4xx 상태 그대로 | 따로 처리하지 않은 그 밖의 Spring 4xx | 일반 실패 안내 |
 | UNAUTHORIZED | 401 | 토큰 없음·무효·만료 | 로그아웃하고 로그인 안내 |
 | LOGIN_FAILED | 401 | F06 | 아이디 유지, 비밀번호 비움 |
@@ -305,6 +313,15 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
 | 테마, 언어, 진행 단계 | shared_preferences |
 | 로그인 토큰 | 앱 메모리(기기에 저장하지 않음) |
 
+반대로 서버가 주지만 지금 화면은 쓰지 않는 값이다. 지우지 않고 둔다.
+
+| 값 | DB | 지금 화면 | 메모 |
+| --- | --- | --- | --- |
+| Tip.createdAt | tip.created_at | 쓰지 않음(배지·정렬은 verifiedAt과 id) | 기록용. 나중에 '올린 날짜'에 쓸 수 있다 |
+| Tip.ownerId | tip.owner_id | 쓰지 않음(실제 화면은 mine만 씀) | 공개 GET에서 뺄지는 9절 미정 11 |
+| T2의 summary | route.summary_* | 쓰지 않음(앱 문구 t2msg로 바꿔 보임) | T2 문구를 서버와 앱 중 어디서 정할지 하나로 정하면 정리된다. 지금은 DB 값이 참고용 |
+| T2의 stepCount | route_step 개수(0) | 준비 중 카드에는 단계 수를 보이지 않음 | |
+
 ## 7. requirements.md와 맞춘 점
 
 - R03 언어 바꾸기: '어느 화면에서나'를 'S05 설정에서만'으로 고쳤다(지구본 버튼 제거 결정).
@@ -316,6 +333,7 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
 | --- | --- | --- |
 | F01·F02 | 공개 조회 MockMvc 테스트(reports/verification.md P03·P06) | test/api_contract_test.dart(명세 예시 읽기), 화면 위젯 검사 |
 | F04~F08 | 인증·등록·권한 회귀 테스트(P04~P06) | 저장소 가짜 응답 검사, 화면 위젯 검사 |
+| DB 표·시드 | SeedAndSchemaTest(메모리 DB의 INFORMATION_SCHEMA: 시퀀스·열·UNIQUE·인덱스·ENUM, 시드 한 번만), SchemaScriptTest(docs/schema.sql = 엔티티가 만드는 CREATE 문) | — |
 | 앱 ↔ 서버 실제 연결 | — | 10장에서 확인(지금은 미확인) |
 
 ## 9. 미정 (data-model.md 검토 메모와 같음)
@@ -328,3 +346,7 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
 6. 같은 상태를 다시 보낼 때 날짜를 갱신할지(지금은 갱신).
 7. 현장 확인 뒤 단계 문구·사진 고치는 방법(지금은 route_step을 직접 고침, 관리 API 없음).
 8. 로그인 토큰을 기기에 남길지(10장).
+9. 폭 없는 공백(U+200B)처럼 눈에 안 보이는 글자만 있는 제목을 막을지(지금은 1자로 받음).
+10. 현장 확인으로 단계를 고칠 때 단계 번호 규칙 또는 단계 버전(팁·진행 기록이 다른 단계를 가리키지 않게).
+11. 공개 GET 응답의 ownerId를 뺄지(계약 변경, 10장 연결 전).
+12. 나중에 열이 필요할 수 있는 것: 단계 현장 확인 날짜, 다시 시도 중복 막기 키, 팁 언어, 표지판 방향·색 등(data-model.md 검토 메모 12).

@@ -4,7 +4,7 @@ package org.skilltransfer.icnsubway;
 final class TextRules {
     private TextRules() {}
 
-    /** null이면 null. U+00A0·U+3000 같은 공백 문자와 U+FEFF도 공백으로 본다(String.strip은 U+00A0을 남긴다). */
+    /** null이면 null. U+00A0·U+3000 같은 공백 문자와 U+FEFF도 공백으로 본다(String.strip은 U+00A0·U+FEFF를 남긴다). */
     static String strip(String s) {
         if (s == null) return null;
         int start = 0, end = s.length();
@@ -25,7 +25,11 @@ final class TextRules {
         return s.codePointCount(0, s.length());
     }
 
+    /**
+     * 유니코드 White_Space(U+0009~U+000D, U+0085, 공백·줄·문단 구분 문자 Zs·Zl·Zp)와 U+FEFF.
+     * 앱(Dart String.trim)과 같은 범위다. Character.isWhitespace는 U+0085를 빼고 U+001C~U+001F를 넣어서 쓰지 않는다.
+     */
     private static boolean isSpace(int cp) {
-        return Character.isWhitespace(cp) || Character.isSpaceChar(cp) || cp == 0xFEFF;
+        return (cp >= 0x09 && cp <= 0x0D) || cp == 0x85 || Character.isSpaceChar(cp) || cp == 0xFEFF;
     }
 }

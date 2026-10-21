@@ -46,10 +46,22 @@ public class RouteService {
     }
 
     private static StepResponse toResponse(RouteStep s) {
-        Text elevator = s.getElevatorEn() == null && s.getElevatorKo() == null ? null : new Text(s.getElevatorEn(), s.getElevatorKo());
         return new StepResponse(s.getStepNo(), s.getRole().name(), s.getIcon().name(), s.getPhotoKey(),
                 new Sign(s.getSignKo(), s.getSignEn()), new Text(s.getTitleEn(), s.getTitleKo()),
                 new Lines(List.of(s.getInstructionsEn().split("\n")), List.of(s.getInstructionsKo().split("\n"))),
-                elevator);
+                bothOrNull(s.getElevatorEn(), s.getElevatorKo()));
+    }
+
+    /**
+     * 엘리베이터 위치는 en·ko가 둘 다 있을 때만 준다. 한쪽만 채운 행(null 또는 공백뿐)은 null로 준다.
+     * 계약의 Text는 두 언어가 모두 필수라, {en, ko:null}을 보내면 앱이 그 경로의 단계 화면 전체를 읽지 못한다.
+     * 공백은 팁 입력과 같은 규칙(TextRules: U+00A0·U+FEFF 등 포함)으로 본다.
+     */
+    private static Text bothOrNull(String en, String ko) {
+        return isEmpty(en) || isEmpty(ko) ? null : new Text(en, ko);
+    }
+
+    private static boolean isEmpty(String s) {
+        return s == null || TextRules.strip(s).isEmpty();
     }
 }

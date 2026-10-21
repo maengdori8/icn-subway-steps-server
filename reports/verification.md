@@ -66,9 +66,47 @@
 
 확인을 마친 뒤 서버를 끄고 실행 확인용 DB(data/icn-subway.mv.db)를 지웠다. 다음 실행 때 시드부터 다시 들어간다. 키 파일 data/.jwt-secret은 남겼다(Git 제외).
 
+## DB 감사 반영 (2026-10-21)
+
+감사 A(코드·문서 일치)·감사 B(디자인 → DB 충분성)의 지적을 확인해 반영했다. 실행용 data/ DB에는 접속하지 않았다(그 시점 data/에는 키 파일만 있음).
+
+명령: `.\gradlew.bat test --offline` 또는 `--rerun` (JAVA_HOME = 위 JDK, GRADLE_USER_HOME=C:\dev\gradle-home)
+
+| 회차 | 결과 | 종료 코드 | 내용 |
+| --- | --- | --- | --- |
+| 5 | 40개 통과 | 0 | 바꾸기 전 기준선 |
+| 6 | 1개 실패 → 수정 | 1 | SchemaScriptTest만 실행: 스크립트 생성 설정이 있으면 Hibernate가 ddl-auto를 보지 않아 메모리 DB에 표가 없었음(시드 SELECT 실패). 테스트 속성에 `jakarta.persistence.schema-generation.database.action=drop-and-create`를 더함. build/schema/create.sql은 이때 생성됨 |
+| 7 | 1개 실패 → 수정 | 1 | 엘리베이터 검사의 복구 문 `jdbc.update(sql, null, null)`이 다른 오버로드로 불려 매개변수가 비었음 → `(Object) null`로 고침(테스트 코드 결함) |
+| 8 | 49개 통과 | 0 | 엘리베이터 두 언어, 공백 범위, JSON 자료형, 시드 한 번, 스키마(INFORMATION_SCHEMA), docs/schema.sql 비교 검사 추가 |
+| 변이 확인 3 | 3개 실패(의도) | 1 | 엘리베이터 조건을 예전 것(둘 다 null일 때만 null)으로, 공백 판정을 isWhitespace로, JsonInputConfig의 @Configuration을 끄자 `elevatorIsGivenOnlyWhenBothLanguagesAreFilled`, `unicodeSpacesAreTrimmedLikeTheApp`, `wrongJsonTypesAre400AndSaveNothing` 실패 → 원래 코드로 되돌림 |
+| 9 | 1개 실패 → 수정 | 1 | Codex 반박 반영 중 새 비교 함수 검사(`comparisonKeepsCaseOfEnumValues`)가 괄호 둘레 공백 차이로 실패 → 정규화에 괄호·쉼표 둘레 공백 제거를 더함 |
+| 10 | 51개 통과 | 0 | Codex 반박 반영 뒤. AuthApiTest 12, DevProfileTest 1, PermissionRegressionTest 6, PublicReadTest 14, SchemaScriptTest 2, SeedAndSchemaTest 4, StarterSmokeTest 1, TipWriteTest 11 |
+
+### ddl-auto=update 실험 (임시 파일 DB, 실행용 data/ 아님)
+
+프로젝트를 스크래치 폴더에 복사하고, 그 안의 임시 파일 DB(jdbc:h2:file:<스크래치>/expdb/icn, ddl-auto=update)로 두 번 시작했다. 두 번째 시작 전에 복사본의 RouteStep만 바꿨다(원본 프로젝트는 그대로).
+
+| 바꾼 것 | 다음 시작 뒤 DB | 결과 |
+| --- | --- | --- |
+| photo_key 길이 40 → 50 | CHARACTER_MAXIMUM_LENGTH 50 | update가 열 길이를 바꿈(Codex 지적이 맞음) |
+| enum Icon에 GATE 추가 | icon ENUM 값 (ESCALATOR, PLANE, TRAIN) 그대로 | update가 ENUM 값을 바꾸지 않음. `icon='GATE'` UPDATE는 'Value not permitted for column' 오류 |
+
+이 결과로 docs/data-model.md '보존과 초기화'와 docs/schema.sql 주석을 고쳤다.
+
+### Codex 반박 판정 (codex exec --sandbox read-only)
+
+| 지적 | 심각도 | 판정 | 처리 |
+| --- | --- | --- | --- |
+| 엘리베이터 공백 판정이 isBlank라 U+00A0·U+FEFF 공백뿐인 문구를 통과시킴 | 중간 | 수용 | TextRules.strip으로 판정. 검사에 U+00A0, U+FEFF+U+0085 추가 |
+| 'update는 기존 열의 자료형·길이를 바꾸지 않는다'는 설명이 틀림 | 중간 | 수용 | 위 실험으로 확인. 길이는 바뀌고 ENUM 값은 안 바뀐다고 고침 |
+| docs/schema.sql 비교가 전부 소문자로 바꿔 ENUM 값 대소문자 오류를 놓침 | 중간 | 수용 | 대소문자 그대로 비교. 비교 함수 검사 추가 |
+| stepNo ""·" "는 막지 않음(null로 넘어감) | 낮음 | 수용 | Integer의 EmptyString도 Fail. 검사 추가(400 INVALID_REQUEST_BODY) |
+| 전역 Jackson 설정 영향(로그인·가입), 무토큰 + 잘못된 자료형의 401 검사 없음 | 낮음 | 수용 | AuthApiTest에 숫자·불리언 username·password 400, TipWriteTest에 무토큰 401, PATCH code 단정 추가 |
+
 ## 확인하지 못한 것
 
 - Android 에뮬레이터(10.0.2.2:8097)와 실제 Flutter 앱에서의 연결. 서버는 127.0.0.1에만 열려 있어 실제 휴대폰은 접속할 수 없다.
 - Flutter 웹(브라우저)에서 부를 때 필요한 CORS. 설정하지 않았다.
 - 1800초 실제 만료(테스트는 과거 시각으로 만든 토큰으로 대신 확인).
 - 단계 문구·표지판·층수의 사실 여부(현장 확인 전 초안).
+- 실행용 data/ DB의 실제 표가 docs/schema.sql과 같은지(규칙상 학생이 H2 콘솔에서 직접 비교). docs/data-model.md의 mermaid 그림이 실제로 그려지는지.

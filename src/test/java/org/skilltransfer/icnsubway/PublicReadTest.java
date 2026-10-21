@@ -63,6 +63,51 @@ class PublicReadTest extends ApiTestSupport {
                 .andExpect(jsonPath("$.steps[4].sign.en").value("Express Platform · To Seoul Station"));
     }
 
+    /** LOCAL 단계와 표본 팁 7이 docs/data-model.md 시드 표와 같은지. */
+    @Test
+    void localStepsAndSampleTip7MatchSeedTable() throws Exception {
+        getWith("/api/routes/LOCAL/steps", null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.steps[*].stepNo").value(contains(1, 2, 3, 4, 5)))
+                .andExpect(jsonPath("$.steps[0].photoKey").value("arrivals"))
+                .andExpect(jsonPath("$.steps[1].photoKey").value(nullValue()))
+                .andExpect(jsonPath("$.steps[2].photoKey").value("localConcourse"))
+                .andExpect(jsonPath("$.steps[3].photoKey").value(nullValue()))
+                .andExpect(jsonPath("$.steps[4].photoKey").value("localPlatform"))
+                .andExpect(jsonPath("$.steps[2].sign.ko").value("일반열차"))
+                .andExpect(jsonPath("$.steps[3].sign.en").value("All-stop Gate"))
+                .andExpect(jsonPath("$.steps[4].sign.en").value("Platform 1·2 · To Seoul Station"))
+                .andExpect(jsonPath("$.steps[4].title.en").value("Board at platform 1 or 2"));
+        getWith("/api/tips/7", null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Ask at the info center if your card fails"))
+                .andExpect(jsonPath("$.location").value("B1, right of the ticket machines"))
+                .andExpect(jsonPath("$.status").value("VERIFIED"))
+                .andExpect(jsonPath("$.verifiedAt").value("2026-10-12T03:00:00Z"));
+    }
+
+    /** 엘리베이터 문구는 en·ko가 둘 다 있을 때만 준다. 한쪽만 채운 행을 {en, ko:null}로 주면 앱이 그 경로의 단계 화면 전체를 못 읽는다. */
+    @Test
+    void elevatorIsGivenOnlyWhenBothLanguagesAreFilled() throws Exception {
+        String sql = "update route_step set elevator_en = ?, elevator_ko = ? where route_code = 'LOCAL' and step_no = 2";
+        try {
+            jdbc.update(sql, "Left of the escalator", null);
+            getWith("/api/routes/LOCAL/steps", null).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.steps[1].elevator").value(nullValue()));
+            for (String blank : new String[] {" ", " ", "﻿\u0085"}) {
+                jdbc.update(sql, blank, "에스컬레이터 왼쪽");
+                getWith("/api/routes/LOCAL/steps", null).andExpect(status().isOk())
+                        .andExpect(jsonPath("$.steps[1].elevator").value(nullValue()));
+            }
+            jdbc.update(sql, "Left of the escalator", "에스컬레이터 왼쪽");
+            getWith("/api/routes/LOCAL/steps", null).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.steps[1].elevator.en").value("Left of the escalator"))
+                    .andExpect(jsonPath("$.steps[1].elevator.ko").value("에스컬레이터 왼쪽"));
+        } finally {
+            jdbc.update(sql, (Object) null, (Object) null); // 시드 상태(현장 확인 전 null)로 되돌린다
+        }
+    }
+
     @Test
     void comingSoonRouteHasNoSteps() throws Exception {
         getWith("/api/routes/T2/steps", null).andExpect(status().isOk()).andExpect(jsonPath("$.steps.length()").value(0));
@@ -124,6 +169,12 @@ class PublicReadTest extends ApiTestSupport {
                 .andExpect(jsonPath("$.mine").value(false));
         getWith("/api/tips/999999", null).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
         getWith("/api/tips/abc", null).andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.id").exists());
+        // 정수가 아니거나 long 범위를 넘는 id도 400(docs/api-spec.yaml GET /api/tips/{id})
+        for (String id : new String[] {"1.5", "9223372036854775808"}) {
+            getWith("/api/tips/" + id, null).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                    .andExpect(jsonPath("$.errors.id").value("형식이 맞지 않습니다."));
+        }
     }
 
     @Test

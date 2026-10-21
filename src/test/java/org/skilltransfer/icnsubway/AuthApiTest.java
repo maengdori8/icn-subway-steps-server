@@ -68,6 +68,22 @@ class AuthApiTest extends ApiTestSupport {
                 .andExpect(jsonPath("$.errors.role").value("허용하지 않는 항목입니다."));
     }
 
+    /** 글 항목에 숫자·불리언을 보내면 문자열로 바꾸지 않고 400이다(JsonInputConfig). 문자열 값은 지금처럼 받는다(다른 테스트). */
+    @Test
+    void signupAndLoginRejectNonStringValues() throws Exception {
+        postJson("/api/auth/signup", null, body("username", 12345, "password", "pass-word-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"))
+                .andExpect(jsonPath("$.errors.username").value("형식이 맞지 않습니다."));
+        postJson("/api/auth/signup", null, body("username", uniqueName(), "password", true))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"))
+                .andExpect(jsonPath("$.errors.password").value("형식이 맞지 않습니다."));
+        postJson("/api/auth/login", null, body("username", "student01", "password", true))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"));
+    }
+
     @Test
     void sampleAccountLoginIssuesHs256TokenFor1800Seconds() throws Exception {
         String res = text(postJson("/api/auth/login", null, body("username", "student01", "password", SAMPLE_PASSWORD))

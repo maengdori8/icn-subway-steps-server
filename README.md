@@ -6,7 +6,9 @@
 | 문서 | 내용 |
 | --- | --- |
 | docs/api-spec.yaml | API 계약(OpenAPI 3.0.3). 앱 연결의 기준 |
-| docs/data-model.md | 테이블·제약·시드·초기화 방법·검토 메모 |
+| docs/data-model.md | 테이블·제약·시드·초기화 방법·검토 메모(맨 위 ER 그림) |
+| docs/schema.sql | 엔티티가 만드는 CREATE 문(참고용. 표는 JPA가 만든다. H2 콘솔에서 비교해 볼 것) |
+| docs/functional-spec.md | 기능별 입력·처리·실패·DB, 화면 → API → DB 추적표 |
 | docs/auth-design.md | 비밀번호·JWT·키 보관·401/403 |
 | docs/requirements.md | 기능 요구(R01~R06, R08)와 수업 기술 조건 |
 | docs/verification-plan.md / reports/verification.md | 검사 계획 / 실제 결과 |

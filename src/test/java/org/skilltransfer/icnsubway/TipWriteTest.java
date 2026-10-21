@@ -115,6 +115,53 @@ class TipWriteTest extends ApiTestSupport {
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.stepNo").exists());
     }
 
+    /** 계약의 자료형(stepNo 정수, 글 항목 문자열)과 다른 값은 바꿔 저장하지 않고 400으로 거절한다. 3.7이 3단계에 저장되면 안 된다. */
+    @Test
+    void wrongJsonTypesAre400AndSaveNothing() throws Exception {
+        String token = student01();
+        int before = tipCount();
+        Object[][] cases = {{"stepNo", 3.7}, {"stepNo", "3"}, {"stepNo", ""}, {"stepNo", " "},
+                {"title", 123}, {"location", true}, {"note", 123}};
+        for (Object[] c : cases) {
+            var payload = tip("t", "l", null);
+            payload.put((String) c[0], c[1]);
+            postJson("/api/tips", token, payload)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"))
+                    .andExpect(jsonPath("$.errors." + c[0]).value("형식이 맞지 않습니다."));
+            // 토큰이 없으면 본문 자료형보다 401이 먼저다
+            postJson("/api/tips", null, payload).andExpect(status().isUnauthorized());
+        }
+        // 상태 값도 문자열만 받는다. 본문 오류(400)가 없는 팁(404)보다 먼저다.
+        patchJson("/api/tips/999999/status", token, body("status", 1))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"))
+                .andExpect(jsonPath("$.errors.status").value("형식이 맞지 않습니다."));
+        assertThat(tipCount()).isEqualTo(before);
+    }
+
+    /**
+     * 앞뒤 공백은 유니코드 White_Space와 U+FEFF다(docs/data-model.md, 앱의 Dart trim과 같은 범위).
+     * String.strip()이 남기는 U+00A0·U+FEFF도 지우고, U+0085(NEL)도 지운다.
+     */
+    @Test
+    void unicodeSpacesAreTrimmedLikeTheApp() throws Exception {
+        String token = student01();
+        postJson("/api/tips", token, tip(" 제목﻿", "﻿B1\u0085 ", " 　\u0085"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("제목"))
+                .andExpect(jsonPath("$.location").value("B1"))
+                .andExpect(jsonPath("$.note").value(nullValue()));
+        postJson("/api/tips", token, tip(" ﻿\n", "\u0085", null))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.title").value("1~80자로 입력하세요."))
+                .andExpect(jsonPath("$.errors.location").value("1~80자로 입력하세요."));
+        // U+001C~U+001F는 유니코드 공백이 아니라서 남긴다(Dart trim도 남긴다).
+        postJson("/api/tips", token, tip("\u001C제목", "B1", null))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("\u001C제목"));
+    }
+
     @Test
     void routeAndStepMustExist() throws Exception {
         String token = student01();
