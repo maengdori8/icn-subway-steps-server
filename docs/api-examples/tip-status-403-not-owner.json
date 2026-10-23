@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "PATCH",
+    "url": "/api/tips/8/status",
+    "auth": "student02 토큰",
+    "body": {
+      "status": "VERIFIED"
+    }
+  },
+  "response": {
+    "status": 403,
+    "headers": {},
+    "body": {
+      "code": "FORBIDDEN",
+      "message": "이 팁을 올린 사람만 상태를 바꿀 수 있습니다.",
+      "errors": {}
+    }
+  },
+  "meta": {
+    "operation": "PATCH /api/tips/{id}/status",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

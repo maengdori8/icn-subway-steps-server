@@ -1,0 +1,23 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/tips",
+    "auth": "student01 토큰",
+    "contentType": "text/plain",
+    "body": "route=LOCAL&stepNo=4&title=t&location=l"
+  },
+  "response": {
+    "status": 415,
+    "headers": {},
+    "body": {
+      "code": "UNSUPPORTED_MEDIA_TYPE",
+      "message": "Content-Type: application/json 으로 보내세요.",
+      "errors": {}
+    }
+  },
+  "meta": {
+    "operation": "POST /api/tips",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

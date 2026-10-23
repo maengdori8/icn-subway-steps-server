@@ -1,0 +1,22 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/tips/7",
+    "auth": "무효 토큰",
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "headers": {},
+    "body": {
+      "code": "UNAUTHORIZED",
+      "message": "로그인이 만료되었거나 올바르지 않습니다.",
+      "errors": {}
+    }
+  },
+  "meta": {
+    "operation": "GET /api/tips/{id}",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

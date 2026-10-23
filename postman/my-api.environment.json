@@ -1,0 +1,36 @@
+{
+  "name": "ICN Subway Steps · 내 서버(127.0.0.1:8097)",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8097",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "userA",
+      "value": "student01",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "userB",
+      "value": "student02",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "passwordA",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "passwordB",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/tips/7",
+    "auth": "없음",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {},
+    "body": {
+      "id": 7,
+      "route": "EXPRESS",
+      "stepNo": 3,
+      "title": "Ask at the info center if your card fails",
+      "location": "B1, right of the ticket machines",
+      "note": null,
+      "status": "VERIFIED",
+      "verifiedAt": "2026-10-12T03:00:00Z",
+      "createdAt": "2026-10-12T03:00:00Z",
+      "ownerId": 102,
+      "mine": false,
+      "example": true
+    }
+  },
+  "meta": {
+    "operation": "GET /api/tips/{id}",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

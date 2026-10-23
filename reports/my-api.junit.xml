@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="ICN Subway Steps · 8장 권한·상태 검사" tests="42" time="0.694">
+  <testsuite name="1 공개 목록과 로그인 / 공개 경로 목록 · 200" id="8ae4793e-e66a-4480-a417-b24509db8dcc" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.049">
+    <testcase name="상태 코드 200" time="0.049" classname="1200"/>
+    <testcase name="직통·일반 경로가 안내 중" time="0.049" classname="1200"/>
+  </testsuite>
+  <testsuite name="1 공개 목록과 로그인 / 공개 단계 목록(LOCAL) · 200" id="21d3deb1-5b2d-4d56-88ee-929bca1625ce" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.010">
+    <testcase name="상태 코드 200" time="0.010" classname="1Local200"/>
+    <testcase name="2단계가 있다(검사용 팁을 2단계에 올림)" time="0.010" classname="1Local200"/>
+  </testsuite>
+  <testsuite name="1 공개 목록과 로그인 / A 로그인 · 200" id="a292d7a7-abd6-40a4-b4b9-3a3cfc0cbc0c" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.123">
+    <testcase name="환경에 passwordA를 넣었다(local.environment.json 또는 --env-var)" time="0.123" classname="1A200"/>
+    <testcase name="상태 코드 200" time="0.123" classname="1A200"/>
+    <testcase name="토큰과 사용자 번호 저장" time="0.123" classname="1A200"/>
+  </testsuite>
+  <testsuite name="1 공개 목록과 로그인 / B 로그인 · 200" id="26f3b276-9217-4e41-8c88-a5c155fb705d" timestamp="2026-10-21T04:03:20.852Z" tests="4" failures="0" errors="0" time="0.121">
+    <testcase name="환경에 passwordB를 넣었다(local.environment.json 또는 --env-var)" time="0.121" classname="1B200"/>
+    <testcase name="상태 코드 200" time="0.121" classname="1B200"/>
+    <testcase name="토큰과 사용자 번호 저장" time="0.121" classname="1B200"/>
+    <testcase name="A와 B는 다른 사용자" time="0.121" classname="1B200"/>
+  </testsuite>
+  <testsuite name="2 A의 새 팁 등록 / A가 새 팁 등록 · 201" id="58b937f6-7a97-43aa-9bc6-7be1d90c41b9" timestamp="2026-10-21T04:03:20.852Z" tests="5" failures="0" errors="0" time="0.011">
+    <testcase name="상태 코드 201" time="0.011" classname="2AA201"/>
+    <testcase name="Location이 새 팁 주소" time="0.011" classname="2AA201"/>
+    <testcase name="보낸 값이 그대로 저장됐다" time="0.011" classname="2AA201"/>
+    <testcase name="서버가 정한 값: 등록자 A, VERIFIED, 예시 아님, 등록 시각 = 확인 시각" time="0.011" classname="2AA201"/>
+    <testcase name="응답에 비교할 값 11개가 모두 있고 자료형이 맞다" time="0.011" classname="2AA201"/>
+  </testsuite>
+  <testsuite name="2 A의 새 팁 등록 / 새 팁 공개 조회 · 200" id="3fe682b7-c5d1-4f2b-8395-4a5e4fdd67e2" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.006">
+    <testcase name="상태 코드 200" time="0.006" classname="2A200"/>
+    <testcase name="등록 응답과 같은 값" time="0.006" classname="2A200"/>
+    <testcase name="토큰 없이 읽으면 mine false" time="0.006" classname="2A200"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 등록 거절 전 2단계 팁 개수 기록" id="9a1cc9cb-88fc-4214-9657-1e913c479608" timestamp="2026-10-21T04:03:20.852Z" tests="1" failures="0" errors="0" time="0.008">
+    <testcase name="상태 코드 200" time="0.008" classname="32"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 로그인 없이 팁 등록 · 401" id="51f37c75-d0bd-48fd-8aeb-f6999d1d43f6" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="상태 코드 401" time="0.003" classname="3401"/>
+    <testcase name="오류 code UNAUTHORIZED" time="0.003" classname="3401"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 제목 공백만 · 400" id="4f4c8e87-a72b-4974-9459-dd801377803e" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.009">
+    <testcase name="상태 코드 400" time="0.009" classname="3400"/>
+    <testcase name="오류 code VALIDATION_FAILED" time="0.009" classname="3400"/>
+    <testcase name="errors.title 있음" time="0.009" classname="3400"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 제목 81자 · 400" id="f2788498-366a-4db5-b446-7b311735dc03" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.011">
+    <testcase name="상태 코드 400" time="0.011" classname="381400"/>
+    <testcase name="오류 code VALIDATION_FAILED" time="0.011" classname="381400"/>
+    <testcase name="errors.title 있음" time="0.011" classname="381400"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 본문에 ownerId · 400" id="dcff48a6-6c89-4fb5-a823-4a1b3a15e85e" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.007">
+    <testcase name="상태 코드 400" time="0.007" classname="3OwnerId400"/>
+    <testcase name="오류 code INVALID_REQUEST_BODY" time="0.007" classname="3OwnerId400"/>
+    <testcase name="errors.ownerId 있음" time="0.007" classname="3OwnerId400"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 거절 뒤 팁 개수 그대로" id="005d16bd-258e-48dc-8af9-500e5dea55ac" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.008">
+    <testcase name="상태 코드 200" time="0.008" classname="3"/>
+    <testcase name="거절된 등록은 팁을 남기지 않았다" time="0.008" classname="3"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 토큰 없이 상태 변경 · 401" id="e6b4150d-2022-4c13-b95d-78b3aa60cbb0" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="상태 코드 401" time="0.003" classname="3401"/>
+    <testcase name="오류 code UNAUTHORIZED" time="0.003" classname="3401"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 재조회 · 401 뒤 그대로" id="af906e4f-cf9d-48e9-a1e4-c98bb58518d4" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.006">
+    <testcase name="상태 코드 200" time="0.006" classname="3401"/>
+    <testcase name="거절 전후 값이 같다" time="0.006" classname="3401"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 무효 토큰으로 상태 변경 · 401" id="916d5bb7-f905-4da7-aa7b-e2e04c6c374f" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="상태 코드 401" time="0.003" classname="3401"/>
+    <testcase name="오류 code UNAUTHORIZED" time="0.003" classname="3401"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 무효 토큰으로 공개 목록 · 401" id="5bb2bc17-9963-4ff2-8d82-f373163748cc" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.004">
+    <testcase name="상태 코드 401" time="0.004" classname="3401"/>
+    <testcase name="오류 code UNAUTHORIZED" time="0.004" classname="3401"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / B가 A의 팁 상태 변경 · 403" id="046c8eb4-0047-426c-8eb1-a610272389a7" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.009">
+    <testcase name="상태 코드 403" time="0.009" classname="3BA403"/>
+    <testcase name="오류 code FORBIDDEN" time="0.009" classname="3BA403"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 재조회 · 403 뒤 그대로" id="e778c89a-5c41-42d8-a1d4-813213c32cbd" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.006">
+    <testcase name="상태 코드 200" time="0.006" classname="3403"/>
+    <testcase name="거절 전후 값이 같다" time="0.006" classname="3403"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / B가 잘못된 status · 400(403보다 먼저)" id="e0bae29f-eb3b-45f1-92d2-96a0c978e479" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.007">
+    <testcase name="상태 코드 400" time="0.007" classname="3BStatus400403"/>
+    <testcase name="오류 code VALIDATION_FAILED" time="0.007" classname="3BStatus400403"/>
+    <testcase name="errors.status 있음" time="0.007" classname="3BStatus400403"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / A가 소문자 status · 400" id="dab74689-6a9b-4e61-bd46-e73860391a70" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.008">
+    <testcase name="상태 코드 400" time="0.008" classname="3AStatus400"/>
+    <testcase name="오류 code VALIDATION_FAILED" time="0.008" classname="3AStatus400"/>
+    <testcase name="errors.status 있음" time="0.008" classname="3AStatus400"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / A가 빈 본문 {} · 400" id="9586653a-69e5-40c7-a596-52126e06515e" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.008">
+    <testcase name="상태 코드 400" time="0.008" classname="3A400"/>
+    <testcase name="오류 code VALIDATION_FAILED" time="0.008" classname="3A400"/>
+    <testcase name="errors.status 있음" time="0.008" classname="3A400"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / A가 status와 title을 함께 · 400" id="0fdc3cd8-20f8-49e3-b98a-2b9558580727" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.007">
+    <testcase name="상태 코드 400" time="0.007" classname="3AStatusTitle400"/>
+    <testcase name="오류 code INVALID_REQUEST_BODY" time="0.007" classname="3AStatusTitle400"/>
+    <testcase name="errors.title 있음" time="0.007" classname="3AStatusTitle400"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 재조회 · 400 뒤 그대로" id="cc73599b-1ad0-4aaf-b235-af01caa9d2d8" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.007">
+    <testcase name="상태 코드 200" time="0.007" classname="3400"/>
+    <testcase name="거절 전후 값이 같다" time="0.007" classname="3400"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / A가 없는 팁 상태 변경 · 404" id="4e536e07-d58a-48aa-b731-88e4e054da04" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.010">
+    <testcase name="상태 코드 404" time="0.010" classname="3A404"/>
+    <testcase name="오류 code NOT_FOUND" time="0.010" classname="3A404"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 토큰 없이 없는 팁 · 401(인증이 먼저)" id="7e3f56d8-be6d-4524-9233-23d2a6dc82bd" timestamp="2026-10-21T04:03:20.852Z" tests="1" failures="0" errors="0" time="0.003">
+    <testcase name="상태 코드 401" time="0.003" classname="3401"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 토큰 없이 팁 삭제 시도 · 401" id="25964808-eda3-4133-a7f0-703a8eac85a2" timestamp="2026-10-21T04:03:20.852Z" tests="1" failures="0" errors="0" time="0.003">
+    <testcase name="상태 코드 401" time="0.003" classname="3401"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / A가 팁 삭제 시도 · 405(삭제 API 없음)" id="56e2dbda-efe8-45d6-a2ee-58d2c5fba8f8" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.007">
+    <testcase name="상태 코드 405" time="0.007" classname="3A405Api"/>
+    <testcase name="오류 code METHOD_NOT_ALLOWED" time="0.007" classname="3A405Api"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 재조회 · 삭제 시도 뒤 그대로" id="a58f64f7-7759-448c-aff9-2bf61ff352d9" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.006">
+    <testcase name="상태 코드 200" time="0.006" classname="3"/>
+    <testcase name="거절 전후 값이 같다" time="0.006" classname="3"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / 토큰 없이 없는 /api 경로 · 401" id="7a48280e-f5a5-4318-a2ca-cd272569fd7a" timestamp="2026-10-21T04:03:20.852Z" tests="1" failures="0" errors="0" time="0.003">
+    <testcase name="상태 코드 401" time="0.003" classname="3Api401"/>
+  </testsuite>
+  <testsuite name="3 거절과 재조회 / A 토큰으로 없는 /api 경로 · 404" id="901f63df-13d9-4478-b7e5-355bcb860bc3" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.024">
+    <testcase name="상태 코드 404" time="0.024" classname="3AApi404"/>
+    <testcase name="오류 code NOT_FOUND" time="0.024" classname="3AApi404"/>
+  </testsuite>
+  <testsuite name="4 상태 변경과 반복 / A가 OUTDATED로 · 200" id="4b05e9dc-6425-4438-90ca-8f728aa138db" timestamp="2026-10-21T04:03:20.852Z" tests="5" failures="0" errors="0" time="0.009">
+    <testcase name="상태 코드 200" time="0.009" classname="4AOutdated200"/>
+    <testcase name="같은 팁이 OUTDATED" time="0.009" classname="4AOutdated200"/>
+    <testcase name="status·verifiedAt 말고 다른 값은 그대로" time="0.009" classname="4AOutdated200"/>
+    <testcase name="verifiedAt이 이 요청 시각으로 다시 기록됐다(이전 값보다 뒤)" time="0.009" classname="4AOutdated200"/>
+    <testcase name="응답에 비교할 값 11개가 모두 있고 자료형이 맞다" time="0.009" classname="4AOutdated200"/>
+  </testsuite>
+  <testsuite name="4 상태 변경과 반복 / A가 같은 OUTDATED 다시 · 200" id="17480ce8-0f23-4279-8831-d4637f331c9d" timestamp="2026-10-21T04:03:20.852Z" tests="5" failures="0" errors="0" time="0.010">
+    <testcase name="상태 코드 200" time="0.010" classname="4AOutdated200"/>
+    <testcase name="상태는 OUTDATED 유지" time="0.010" classname="4AOutdated200"/>
+    <testcase name="verifiedAt 말고 다른 값은 그대로" time="0.010" classname="4AOutdated200"/>
+    <testcase name="verifiedAt이 이 요청 시각으로 다시 기록됐다(이전 값보다 뒤)" time="0.010" classname="4AOutdated200"/>
+    <testcase name="응답에 비교할 값 11개가 모두 있고 자료형이 맞다" time="0.010" classname="4AOutdated200"/>
+  </testsuite>
+  <testsuite name="4 상태 변경과 반복 / 재조회 · OUTDATED 유지" id="a427fd66-820c-4f39-a59b-ca789d2874e5" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.005">
+    <testcase name="상태 코드 200" time="0.005" classname="4Outdated"/>
+    <testcase name="마지막 정상 변경 응답과 같다" time="0.005" classname="4Outdated"/>
+  </testsuite>
+  <testsuite name="4 상태 변경과 반복 / A가 VERIFIED로 되돌림 · 200" id="757ee6d7-dfae-49a4-b266-f3b6b66f7a32" timestamp="2026-10-21T04:03:20.852Z" tests="5" failures="0" errors="0" time="0.011">
+    <testcase name="상태 코드 200" time="0.011" classname="4AVerified200"/>
+    <testcase name="VERIFIED로 돌아왔다" time="0.011" classname="4AVerified200"/>
+    <testcase name="status·verifiedAt 말고 다른 값은 그대로" time="0.011" classname="4AVerified200"/>
+    <testcase name="verifiedAt이 이 요청 시각으로 다시 기록됐다(이전 값보다 뒤)" time="0.011" classname="4AVerified200"/>
+    <testcase name="응답에 비교할 값 11개가 모두 있고 자료형이 맞다" time="0.011" classname="4AVerified200"/>
+  </testsuite>
+  <testsuite name="5 내 팁과 목록 / A의 내 팁 · 200" id="856edf9f-3ceb-4da7-bde2-21dbf35a7073" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.008">
+    <testcase name="상태 코드 200" time="0.008" classname="5A200"/>
+    <testcase name="새 팁이 들어 있다" time="0.008" classname="5A200"/>
+    <testcase name="모든 팁이 A의 팁이고 mine true" time="0.008" classname="5A200"/>
+  </testsuite>
+  <testsuite name="5 내 팁과 목록 / B의 내 팁 · 200" id="90813934-0680-41f3-b9f7-9344cc84c4ce" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.007">
+    <testcase name="상태 코드 200" time="0.007" classname="5B200"/>
+    <testcase name="A의 새 팁은 없다" time="0.007" classname="5B200"/>
+    <testcase name="모든 팁이 B의 팁이고 mine true" time="0.007" classname="5B200"/>
+  </testsuite>
+  <testsuite name="5 내 팁과 목록 / 토큰 없이 내 팁 · 401" id="275d4f69-b340-4ad7-8f1d-ae2bf07463ea" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.003">
+    <testcase name="상태 코드 401" time="0.003" classname="5401"/>
+    <testcase name="오류 code UNAUTHORIZED" time="0.003" classname="5401"/>
+  </testsuite>
+  <testsuite name="5 내 팁과 목록 / 2단계 팁 목록(A 토큰) · mine true" id="ac5bc135-2c9e-4aa7-89e7-1c050a1edcae" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.010">
+    <testcase name="상태 코드 200" time="0.010" classname="52AMineTrue"/>
+    <testcase name="새 팁이 mine true" time="0.010" classname="52AMineTrue"/>
+  </testsuite>
+  <testsuite name="5 내 팁과 목록 / 2단계 팁 목록(B 토큰) · mine false" id="5a4b2c33-f39f-4c13-af9e-aaf0aee898f9" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.009">
+    <testcase name="상태 코드 200" time="0.009" classname="52BMineFalse"/>
+    <testcase name="새 팁이 mine false" time="0.009" classname="52BMineFalse"/>
+  </testsuite>
+  <testsuite name="6 계정 / 이미 있는 아이디로 가입 · 409" id="2934149e-dade-4f54-8f71-5a9fafb9a5fc" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.007">
+    <testcase name="상태 코드 409" time="0.007" classname="6409"/>
+    <testcase name="오류 code USERNAME_TAKEN" time="0.007" classname="6409"/>
+    <testcase name="errors.username 있음" time="0.007" classname="6409"/>
+  </testsuite>
+  <testsuite name="6 계정 / 틀린 비밀번호 로그인 · 401" id="7a4f2f33-1050-4ff1-ad25-4bb3746bbf0e" timestamp="2026-10-21T04:03:20.852Z" tests="2" failures="0" errors="0" time="0.121">
+    <testcase name="상태 코드 401" time="0.121" classname="6401"/>
+    <testcase name="오류 code LOGIN_FAILED" time="0.121" classname="6401"/>
+  </testsuite>
+  <testsuite name="6 계정 / 빈 칸 로그인 · 400" id="67a7a47e-3c32-40c8-bd34-400f959dbc79" timestamp="2026-10-21T04:03:20.852Z" tests="3" failures="0" errors="0" time="0.004">
+    <testcase name="상태 코드 400" time="0.004" classname="6400"/>
+    <testcase name="오류 code VALIDATION_FAILED" time="0.004" classname="6400"/>
+    <testcase name="errors.username 있음" time="0.004" classname="6400"/>
+  </testsuite>
+</testsuites>

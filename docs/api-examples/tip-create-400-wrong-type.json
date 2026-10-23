@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/tips",
+    "auth": "student01 토큰",
+    "body": {
+      "route": "LOCAL",
+      "stepNo": "4",
+      "title": "t",
+      "location": "l"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {},
+    "body": {
+      "code": "INVALID_REQUEST_BODY",
+      "message": "요청 본문을 읽을 수 없습니다.",
+      "errors": {
+        "stepNo": "형식이 맞지 않습니다."
+      }
+    }
+  },
+  "meta": {
+    "operation": "POST /api/tips",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

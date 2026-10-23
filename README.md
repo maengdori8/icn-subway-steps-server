@@ -6,14 +6,39 @@
 | 문서 | 내용 |
 | --- | --- |
 | docs/api-spec.yaml | API 계약(OpenAPI 3.0.3). 앱 연결의 기준 |
+| docs/api-reference.md | 사람이 읽는 API 명세서(yaml 풀이, API별 상태 코드·예시 링크, 검토 필요 목록) |
+| docs/api-examples/ | 자동 테스트(MockMvc)로 만든 예시 JSON. 실행 서버의 실제 응답이 아니다 |
+| docs/samples/ | 실행 서버의 실제 응답 표본 자리(학생이 모은다, 아직 없음) |
 | docs/data-model.md | 테이블·제약·시드·초기화 방법·검토 메모(맨 위 ER 그림) |
-| docs/schema.sql | 엔티티가 만드는 CREATE 문(참고용. 표는 JPA가 만든다. H2 콘솔에서 비교해 볼 것) |
+| docs/schema.sql | 엔티티로 만든 create 스크립트(참고용. 실행 DB의 표는 ddl-auto=update가 만들어 열 순서·UNIQUE 방식이 다르다. H2 콘솔에서 비교해 볼 것) |
 | docs/functional-spec.md | 기능별 입력·처리·실패·DB, 화면 → API → DB 추적표 |
 | docs/auth-design.md | 비밀번호·JWT·키 보관·401/403 |
-| docs/requirements.md | 기능 요구(R01~R06, R08)와 수업 기술 조건 |
+| docs/requirements.md | 기능 요구(R01~R08)와 수업 기술 조건 |
+| docs/permission-matrix.md / docs/state-rules.md | 8장 권한표(로그인 없음·등록자·다른 사용자) / 팁 상태 전이 규칙 |
 | docs/verification-plan.md / reports/verification.md | 검사 계획 / 실제 결과 |
+| postman/ | 8장 Postman 컬렉션·환경(비밀번호 비움) |
 | reports/change-review.md | 바뀐 파일·Codex 반박 판정·남은 문제·인계 |
 | docs/ui-*.csv, S02·S03-screen-spec.md, ui-handoff.md, ui-validation-decisions.md | 5장 입력(C:\dev\chapter05-ai\docs에서 복사, 수정하지 않음) |
+
+## 패키지 구조
+
+요청은 controller → service → repository → domain 순서로 흐른다(교재 6장의 요청 경로).
+진입점 `StarterApplication`은 맨 위 패키지에 두어 아래 패키지를 모두 스캔한다.
+
+```text
+src/main/java/org/skilltransfer/icnsubway
+├── StarterApplication.java   진입점
+├── controller/   HTTP 요청을 받는 곳: AuthController, RouteController, TipController, HelloController
+├── service/      규칙과 판단: AuthService, RouteService, TipService (입력 검사, 401·400·404·403 순서, 등록자 비교)
+├── repository/   DB 조회·저장(Spring Data JPA): UserRepository, RouteRepository, RouteStepRepository, TipRepository
+├── domain/       DB 표와 짝인 엔티티: AppUser, Route, RouteStep, Tip
+├── dto/          요청·응답 JSON 모양: Requests, Responses
+├── security/     로그인·JWT·접근 규칙: SecurityConfig, JwtService, JwtAuthenticationFilter, AuthUser
+├── config/       설정·처음 자료: JsonInputConfig(JSON 자료형 엄격), SeedData(시드)
+└── common/       공통: ApiAdvice·ApiError·ApiException(오류 응답 {code, message, errors}), TextRules(공백·글자 수 규칙)
+```
+
+테스트(src/test/java/org/skilltransfer/icnsubway)는 맨 위 패키지에 그대로 두고 필요한 클래스를 import한다.
 
 ## 실행
 
@@ -30,6 +55,9 @@ PowerShell에서:
 - 처음 실행하면 data/icn-subway.mv.db(DB)와 data/.jwt-secret(JWT 키)이 생긴다. 둘 다 Git에서 빠진다.
   DB를 처음 상태로 돌리려면 서버를 끄고 data/icn-subway.mv.db를 지운다(시드가 다시 들어간다).
 - 표본 계정 student01·student02, 비밀번호는 docs/requirements.md의 공개 표본 값(로컬 실습 전용).
+- api-reference.md는 손으로 고친다. 고친 뒤 yaml·코드와 맞는지 확인: `.\gradlew.bat test --offline --rerun --tests '*ApiContractDocTest*'`
+  - docs/만 고쳤을 때는 `--rerun`을 꼭 붙인다. Gradle은 docs/를 테스트 입력으로 보지 않아서, 붙이지 않으면 테스트를 하나도 돌리지 않고 BUILD SUCCESSFUL만 나온다.
+- 평소 test에서 ApiExamplesGenerator가 docs/api-examples/를 지금 코드의 응답과 비교한다. 코드나 yaml을 바꿔 응답이 달라지면 이 테스트가 실패하므로 예시를 다시 만든다. 명령과 확인 순서(종료 코드가 0일 때만 복사)는 docs/api-examples/README.md '다시 만드는 명령'에 있다.
 
 ## 앱(Flutter)에서 연결
 

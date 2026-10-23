@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.JsonPath;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,49 @@ class PermissionRegressionTest extends ApiTestSupport {
         patchJson("/api/tips/" + id + "/status", a, body("status", "VERIFIED")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("VERIFIED"));
         getWith("/api/tips/" + id, null).andExpect(jsonPath("$.status").value("VERIFIED"));
+    }
+
+    /**
+     * 8장 P02: 같은 상태를 다시 보내면 상태와 다른 값은 그대로이고 verifiedAt만 그 요청 시각으로 다시 기록한다
+     * (docs/state-rules.md 전이 표의 VERIFIED→VERIFIED, OUTDATED→OUTDATED 행). 응답의 시각과 DB의 시각도 같아야 한다.
+     */
+    @Test
+    void sameStatusAgainKeepsOtherValuesAndRefreshesVerifiedAt() throws Exception {
+        String a = student01();
+        long id = createTip(a, "LOCAL", 3, "Repeat tip");
+        for (String next : List.of("VERIFIED", "OUTDATED")) {
+            if (next.equals("OUTDATED")) {
+                patchJson("/api/tips/" + id + "/status", a, body("status", "OUTDATED")).andExpect(status().isOk());
+            }
+            jdbc.update("update tip set verified_at = ? where id = ?", Timestamp.from(Instant.parse("2020-01-01T00:00:00Z")), id);
+            Map<String, Object> before = tipRow(id);
+            int count = tipCount();
+
+            Instant sentAfter = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+            String res = text(patchJson("/api/tips/" + id + "/status", a, body("status", next))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value((int) id))
+                    .andExpect(jsonPath("$.status").value(next))
+                    .andExpect(jsonPath("$.ownerId").value(101)));
+            Instant answeredBefore = Instant.now();
+            Instant verifiedAt = Instant.parse(JsonPath.read(res, "$.verifiedAt"));
+            assertThat(verifiedAt).as(next + " 응답 verifiedAt은 이 요청 시각").isBetween(sentAfter, answeredBefore);
+
+            Map<String, Object> after = tipRow(id);
+            assertThat(after.get("STATUS")).isEqualTo(next);
+            assertThat(asInstant(after.get("VERIFIED_AT"))).as(next + " DB verified_at = 응답 verifiedAt").isEqualTo(verifiedAt);
+            for (String col : List.of("TITLE", "LOCATION", "NOTE", "OWNER_ID", "CREATED_AT", "ROUTE_CODE", "STEP_NO", "EXAMPLE")) {
+                assertThat(after.get(col)).as(next + " " + col).isEqualTo(before.get(col));
+            }
+            assertThat(tipCount()).isEqualTo(count);
+        }
+    }
+
+    private static Instant asInstant(Object value) {
+        if (value instanceof OffsetDateTime odt) return odt.toInstant();
+        if (value instanceof Timestamp ts) return ts.toInstant();
+        if (value instanceof Instant instant) return instant;
+        throw new AssertionError("시각 열의 자료형이 예상과 다름: " + value);
     }
 
     @Test
@@ -92,6 +137,38 @@ class PermissionRegressionTest extends ApiTestSupport {
         patchJson("/api/tips/999999/status", null, body("status", "WRONG")).andExpect(status().isUnauthorized());
         patchJson("/api/tips/999999/status", a, body("status", "WRONG")).andExpect(status().isBadRequest());
         patchJson("/api/tips/8/status", b, body("status", "WRONG")).andExpect(status().isBadRequest());
+    }
+
+    /**
+     * 경로의 id가 정수가 아니거나 long 범위 밖이면 400 VALIDATION_FAILED errors.id다(GET /api/tips/{id}와 같음).
+     * 경로 변수는 본문보다 먼저 읽으므로 본문이 틀려도 errors에는 id만 있다. 토큰 검사(401)는 그보다 먼저다.
+     * 없는 번호는 0·음수도 404다. 어느 경우도 팁 행과 개수는 그대로다.
+     */
+    @Test
+    void badTipIdIs400AndMissingIdIs404() throws Exception {
+        String a = student01();
+        Map<String, Object> before = tipRow(8L);
+        int count = tipCount();
+        for (String id : new String[] {"abc", "1.5", "9223372036854775808"}) {
+            patchJson("/api/tips/" + id + "/status", a, body("status", "OUTDATED"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                    .andExpect(jsonPath("$.errors.id").value("형식이 맞지 않습니다."));
+            patchJson("/api/tips/" + id + "/status", a, body("status", 1))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                    .andExpect(jsonPath("$.errors.id").exists())
+                    .andExpect(jsonPath("$.errors.status").doesNotExist());
+            patchJson("/api/tips/" + id + "/status", null, body("status", "OUTDATED")).andExpect(status().isUnauthorized());
+        }
+        for (String id : new String[] {"0", "-1", "999999"}) {
+            patchJson("/api/tips/" + id + "/status", a, body("status", "OUTDATED"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                    .andExpect(jsonPath("$.message").value("팁을 찾을 수 없습니다."));
+        }
+        assertThat(tipRow(8L)).isEqualTo(before);
+        assertThat(tipCount()).isEqualTo(count);
     }
 
     @Test

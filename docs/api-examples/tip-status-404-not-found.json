@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "PATCH",
+    "url": "/api/tips/999999/status",
+    "auth": "student01 토큰",
+    "body": {
+      "status": "OUTDATED"
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {},
+    "body": {
+      "code": "NOT_FOUND",
+      "message": "팁을 찾을 수 없습니다.",
+      "errors": {}
+    }
+  },
+  "meta": {
+    "operation": "PATCH /api/tips/{id}/status",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

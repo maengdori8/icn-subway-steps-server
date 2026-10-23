@@ -1,0 +1,60 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/routes",
+    "auth": "없음",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {},
+    "body": {
+      "routes": [
+        {
+          "code": "EXPRESS",
+          "name": {
+            "en": "Express Train",
+            "ko": "직통열차"
+          },
+          "summary": {
+            "en": "Non-stop to Seoul Station · ticket needed",
+            "ko": "서울역까지 무정차 · 승차권 필요"
+          },
+          "available": true,
+          "stepCount": 5
+        },
+        {
+          "code": "LOCAL",
+          "name": {
+            "en": "All-stop Train",
+            "ko": "일반열차"
+          },
+          "summary": {
+            "en": "Stops at every station · T-money card",
+            "ko": "모든 역 정차 · 교통카드(T-money)"
+          },
+          "available": true,
+          "stepCount": 5
+        },
+        {
+          "code": "T2",
+          "name": {
+            "en": "T2 → Seoul Station",
+            "ko": "T2 → 서울역"
+          },
+          "summary": {
+            "en": "From T2 arrivals",
+            "ko": "T2 입국장에서 출발"
+          },
+          "available": false,
+          "stepCount": 0
+        }
+      ]
+    }
+  },
+  "meta": {
+    "operation": "GET /api/routes",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

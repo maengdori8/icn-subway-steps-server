@@ -3,6 +3,8 @@ package org.skilltransfer.icnsubway;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -14,7 +16,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
- * docs/schema.sql을 만드는 방법이자, 그 파일이 지금 엔티티가 만드는 표 정의와 같은지 보는 검사.
+ * docs/schema.sql을 만드는 방법이자, 그 파일이 지금 엔티티로 만든 create 스크립트와 같은지 보는 검사
+ * (실행 설정 ddl-auto=update가 새 DB에 보내는 DDL과는 열 순서·UNIQUE 방식이 다르다. docs/schema.sql 머리말).
  * 이 테스트에서만 Hibernate 스키마 스크립트 생성(jakarta.persistence.schema-generation.scripts.*)을 켜서
  * build/schema/create.sql에 CREATE 문을 쓴다. 앱 실행 설정(application*.properties)에는 이 설정이 없다.
  * 메모리 DB 이름을 따로 써서 다른 테스트의 DB와 섞이지 않고, 실행용 data/ 파일 DB에는 접속하지 않는다.
@@ -34,11 +37,19 @@ class SchemaScriptTest {
     static final String SCRIPT = "build/schema/create.sql";
 
     static {
-        new File(SCRIPT).getParentFile().mkdirs(); // Spring(=Hibernate)이 뜨기 전에 폴더를 만든다
+        // Spring(=Hibernate)이 뜨기 전에 예전 실행이 남긴 파일을 지우고 폴더를 만든다.
+        // 지우지 않으면 스크립트 생성이 멈춰도 옛 파일로 비교해 통과할 수 있다.
+        try {
+            Files.deleteIfExists(Path.of(SCRIPT));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        new File(SCRIPT).getParentFile().mkdirs();
     }
 
     @Test
     void docsSchemaSqlMatchesWhatHibernateCreates() throws Exception {
+        assertThat(Path.of(SCRIPT)).as("이번 실행에서 Hibernate가 스크립트를 새로 써야 한다").exists();
         Set<String> generated = statements(Files.readString(Path.of(SCRIPT)));
         assertThat(generated).contains(
                 "create sequence app_user_seq start with 103 increment by 1",

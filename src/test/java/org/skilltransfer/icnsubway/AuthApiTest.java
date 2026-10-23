@@ -2,6 +2,9 @@ package org.skilltransfer.icnsubway;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.jayway.jsonpath.JsonPath;
@@ -13,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 
 /** V10~V18: 회원가입·로그인·토큰 검사. */
 class AuthApiTest extends ApiTestSupport {
@@ -66,6 +70,26 @@ class AuthApiTest extends ApiTestSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"))
                 .andExpect(jsonPath("$.errors.role").value("허용하지 않는 항목입니다."));
+        // 로그인 본문도 같은 규칙이다
+        postJson("/api/auth/login", null, body("username", "student01", "password", SAMPLE_PASSWORD, "remember", true))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"))
+                .andExpect(jsonPath("$.errors.remember").value("허용하지 않는 항목입니다."));
+    }
+
+    /** 가입·로그인도 본문이 JSON이 아니면 415다(토큰 없이도 나온다). 가입 201에는 Location이 없고, 오래된 헤더는 보지 않는다. */
+    @Test
+    void authBodiesMustBeJsonAndSignupIgnoresStaleHeader() throws Exception {
+        for (String url : new String[] {"/api/auth/signup", "/api/auth/login"}) {
+            mvc.perform(post(url).contentType("text/plain").content("username=student01"))
+                    .andExpect(status().isUnsupportedMediaType())
+                    .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
+        }
+        mvc.perform(post("/api/auth/signup").header(HttpHeaders.AUTHORIZATION, bearer(expiredToken()))
+                        .contentType("application/json")
+                        .content(toJson(body("username", uniqueName(), "password", "pass-word-1"))))
+                .andExpect(status().isCreated())
+                .andExpect(header().doesNotExist("Location"));
     }
 
     /** 글 항목에 숫자·불리언을 보내면 문자열로 바꾸지 않고 400이다(JsonInputConfig). 문자열 값은 지금처럼 받는다(다른 테스트). */
@@ -111,12 +135,32 @@ class AuthApiTest extends ApiTestSupport {
         assertThat(noUser).isEqualTo(wrongPw);
         postJson("/api/auth/login", null, body("username", "student01", "password", "가".repeat(30)))
                 .andExpect(status().isUnauthorized());
+        // 공백뿐인 비밀번호도 빈 값이 아니라서 400이 아니라 비교로 간다(표본 계정의 비밀번호와 달라 401)
+        postJson("/api/auth/login", null, body("username", "student01", "password", "   "))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("LOGIN_FAILED"));
+        // 400 검사가 401 LOGIN_FAILED보다 먼저다
+        postJson("/api/auth/login", null, body("username", "", "password", "wrong-pass"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
     }
 
     @Test
     void blankLoginIs400() throws Exception {
         postJson("/api/auth/login", null, body("username", "", "password", ""))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.username").value("아이디를 입력하세요."))
+                .andExpect(jsonPath("$.errors.password").value("비밀번호를 입력하세요."));
+    }
+
+    /** 본문 전체가 JSON null이면 빈 본문처럼 읽기 오류(400 INVALID_REQUEST_BODY), 항목 값만 null이면 항목 검사(VALIDATION_FAILED)다. */
+    @Test
+    void wholeNullBodyIsUnreadableButNullFieldsAreValidation() throws Exception {
+        postJson("/api/auth/login", null, "null")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"))
+                .andExpect(jsonPath("$.errors").isEmpty());
+        postJson("/api/auth/login", null, "{\"username\":null,\"password\":null}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors.username").value("아이디를 입력하세요."))
                 .andExpect(jsonPath("$.errors.password").value("비밀번호를 입력하세요."));
     }
@@ -136,6 +180,23 @@ class AuthApiTest extends ApiTestSupport {
         postJson("/api/tips", null, body("route", "LOCAL", "stepNo", 1, "title", "t", "location", "l"))
                 .andExpect(status().isUnauthorized());
         patchJson("/api/tips/8/status", null, body("status", "VERIFIED")).andExpect(status().isUnauthorized());
+        // 헤더가 없는 보호 API의 401 문구(헤더가 무효일 때와 다름)
+        getWith("/api/me/tips", null).andExpect(jsonPath("$.message").value("로그인이 필요합니다."));
+    }
+
+    /** 선언하지 않은 메서드·주소: 익명이면 보안 규칙이 먼저라 401, 토큰이 있으면 405·404다(docs/api-spec.yaml 공통 규칙). */
+    @Test
+    void undeclaredMethodsAndPaths() throws Exception {
+        String token = student01();
+        mvc.perform(delete("/api/tips/7")).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+        mvc.perform(delete("/api/tips/7").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isMethodNotAllowed()).andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"));
+        mvc.perform(get("/api/tip")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/tip").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
+        // /api/auth/** 아래 다른 요청은 필터가 헤더를 보지 않아 토큰이 있어도 401이다
+        mvc.perform(get("/api/auth/login").header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isUnauthorized());
+        getWith("/api/tips/7", null).andExpect(status().isOk()); // 대조군: 선언한 공개 GET
     }
 
     @Test

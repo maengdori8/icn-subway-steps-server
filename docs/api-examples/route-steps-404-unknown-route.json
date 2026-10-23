@@ -1,0 +1,22 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/routes/NOPE/steps",
+    "auth": "없음",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers": {},
+    "body": {
+      "code": "NOT_FOUND",
+      "message": "경로를 찾을 수 없습니다.",
+      "errors": {}
+    }
+  },
+  "meta": {
+    "operation": "GET /api/routes/{route}/steps",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

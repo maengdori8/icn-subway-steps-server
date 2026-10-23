@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/tips/abc",
+    "auth": "없음",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "headers": {},
+    "body": {
+      "code": "VALIDATION_FAILED",
+      "message": "입력값을 확인하세요.",
+      "errors": {
+        "id": "형식이 맞지 않습니다."
+      }
+    }
+  },
+  "meta": {
+    "operation": "GET /api/tips/{id}",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/tips",
+    "auth": "student01 토큰",
+    "body": {
+      "route": "LOCAL",
+      "stepNo": 6,
+      "title": "   ",
+      "location": "B1"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {},
+    "body": {
+      "code": "VALIDATION_FAILED",
+      "message": "입력값을 확인하세요.",
+      "errors": {
+        "stepNo": "1~5 사이의 단계 번호를 보내세요.",
+        "title": "1~80자로 입력하세요."
+      }
+    }
+  },
+  "meta": {
+    "operation": "POST /api/tips",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

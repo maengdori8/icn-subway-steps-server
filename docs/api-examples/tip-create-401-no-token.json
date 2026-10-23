@@ -1,0 +1,27 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/tips",
+    "auth": "없음",
+    "body": {
+      "route": "LOCAL",
+      "stepNo": 4,
+      "title": "t",
+      "location": "l"
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {},
+    "body": {
+      "code": "UNAUTHORIZED",
+      "message": "로그인이 필요합니다.",
+      "errors": {}
+    }
+  },
+  "meta": {
+    "operation": "POST /api/tips",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/auth/login",
+    "auth": "없음",
+    "body": {
+      "username": "student01",
+      "password": "<숨김: 표본 비밀번호>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {},
+    "body": {
+      "accessToken": "<숨김: 예시용, 실행할 수 없는 값>",
+      "tokenType": "Bearer",
+      "expiresIn": 1800,
+      "user": {
+        "id": 101,
+        "username": "student01"
+      }
+    }
+  },
+  "meta": {
+    "operation": "POST /api/auth/login",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님",
+    "replaced": [
+      "request.body.password",
+      "response.body.accessToken"
+    ]
+  }
+}

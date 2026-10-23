@@ -1,0 +1,147 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/routes/EXPRESS/steps",
+    "auth": "없음",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {},
+    "body": {
+      "route": "EXPRESS",
+      "steps": [
+        {
+          "stepNo": 1,
+          "role": "HERE",
+          "icon": "PLANE",
+          "photoKey": "arrivals",
+          "sign": {
+            "ko": "제1여객터미널 입국장",
+            "en": "Terminal 1 Arrivals"
+          },
+          "title": {
+            "en": "Walk out of the arrivals hall",
+            "ko": "입국장 밖으로 나오기"
+          },
+          "instructions": {
+            "en": [
+              "Exit through the arrival doors with your bags.",
+              "Look up for signs that say Airport Railroad ({ko|공항철도})."
+            ],
+            "ko": [
+              "짐을 찾고 도착 출구로 나옵니다.",
+              "천장에서 '공항철도 {en|Airport Railroad}' 표지판을 찾습니다."
+            ]
+          },
+          "elevator": null
+        },
+        {
+          "stepNo": 2,
+          "role": "FIND",
+          "icon": "ESCALATOR",
+          "photoKey": "transportCenter",
+          "sign": {
+            "ko": "교통센터 · 공항철도",
+            "en": "Transportation Center · Airport Railroad"
+          },
+          "title": {
+            "en": "Go down to the Transportation Center",
+            "ko": "교통센터로 내려가기"
+          },
+          "instructions": {
+            "en": [
+              "Follow the Airport Railroad signs to the Transportation Center.",
+              "Take the escalator or elevator down one floor."
+            ],
+            "ko": [
+              "공항철도 표지판을 따라 교통센터로 갑니다.",
+              "에스컬레이터나 엘리베이터로 한 층 내려갑니다."
+            ]
+          },
+          "elevator": null
+        },
+        {
+          "stepNo": 3,
+          "role": "FIND",
+          "icon": "TRAIN",
+          "photoKey": "expressConcourse",
+          "sign": {
+            "ko": "직통열차",
+            "en": "Express Train"
+          },
+          "title": {
+            "en": "Buy an Express Train ticket",
+            "ko": "직통열차 승차권 사기"
+          },
+          "instructions": {
+            "en": [
+              "Find the Express Train sign.",
+              "Use a ticket machine or the counter next to it."
+            ],
+            "ko": [
+              "'직통열차' 표지판을 찾습니다.",
+              "옆의 발매기나 안내센터에서 승차권을 삽니다."
+            ]
+          },
+          "elevator": null
+        },
+        {
+          "stepNo": 4,
+          "role": "FIND",
+          "icon": "TRAIN",
+          "photoKey": "expressGate",
+          "sign": {
+            "ko": "직통열차 승차구",
+            "en": "Express Gate"
+          },
+          "title": {
+            "en": "Pass the Express Train gate",
+            "ko": "직통열차 개찰구 통과"
+          },
+          "instructions": {
+            "en": [
+              "Use the gate marked Express Train, not All-stop.",
+              "Keep your ticket until you leave Seoul Station."
+            ],
+            "ko": [
+              "'일반열차'가 아닌 '직통열차' 개찰구로 갑니다.",
+              "승차권은 서울역에서 나갈 때까지 보관합니다."
+            ]
+          },
+          "elevator": null
+        },
+        {
+          "stepNo": 5,
+          "role": "FIND",
+          "icon": "TRAIN",
+          "photoKey": "expressPlatform",
+          "sign": {
+            "ko": "직통열차 승강장 · 서울역 방면",
+            "en": "Express Platform · To Seoul Station"
+          },
+          "title": {
+            "en": "Board at the Express platform",
+            "ko": "직통열차 승강장에서 탑승"
+          },
+          "instructions": {
+            "en": [
+              "Check the screen says Seoul Station.",
+              "Board the train and find your seat."
+            ],
+            "ko": [
+              "전광판에 '서울역'이 보이는지 확인합니다.",
+              "열차에 타고 자리를 찾습니다."
+            ]
+          },
+          "elevator": null
+        }
+      ]
+    }
+  },
+  "meta": {
+    "operation": "GET /api/routes/{route}/steps",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

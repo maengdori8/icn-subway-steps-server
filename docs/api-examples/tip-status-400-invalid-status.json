@@ -1,0 +1,26 @@
+{
+  "request": {
+    "method": "PATCH",
+    "url": "/api/tips/9/status",
+    "auth": "student01 토큰",
+    "body": {
+      "status": "DELETED"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {},
+    "body": {
+      "code": "VALIDATION_FAILED",
+      "message": "입력값을 확인하세요.",
+      "errors": {
+        "status": "VERIFIED 또는 OUTDATED 중 하나를 보내세요."
+      }
+    }
+  },
+  "meta": {
+    "operation": "PATCH /api/tips/{id}/status",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

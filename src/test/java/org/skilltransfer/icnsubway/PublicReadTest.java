@@ -58,8 +58,10 @@ class PublicReadTest extends ApiTestSupport {
                 .andExpect(jsonPath("$.steps[0].instructions.en.length()").value(2))
                 .andExpect(jsonPath("$.steps[0].instructions.ko[0]").value("짐을 찾고 도착 출구로 나옵니다."))
                 .andExpect(jsonPath("$.steps[0].elevator").value(nullValue()))
-                .andExpect(jsonPath("$.steps[1].photoKey").value(nullValue()))
+                .andExpect(jsonPath("$.steps[1].photoKey").value("transportCenter"))
                 .andExpect(jsonPath("$.steps[1].role").value("FIND"))
+                .andExpect(jsonPath("$.steps[3].photoKey").value("expressGate"))
+                .andExpect(jsonPath("$.steps[4].photoKey").value("expressPlatform"))
                 .andExpect(jsonPath("$.steps[4].sign.en").value("Express Platform · To Seoul Station"));
     }
 
@@ -70,9 +72,9 @@ class PublicReadTest extends ApiTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.steps[*].stepNo").value(contains(1, 2, 3, 4, 5)))
                 .andExpect(jsonPath("$.steps[0].photoKey").value("arrivals"))
-                .andExpect(jsonPath("$.steps[1].photoKey").value(nullValue()))
+                .andExpect(jsonPath("$.steps[1].photoKey").value("transportCenter"))
                 .andExpect(jsonPath("$.steps[2].photoKey").value("localConcourse"))
-                .andExpect(jsonPath("$.steps[3].photoKey").value(nullValue()))
+                .andExpect(jsonPath("$.steps[3].photoKey").value("localGate"))
                 .andExpect(jsonPath("$.steps[4].photoKey").value("localPlatform"))
                 .andExpect(jsonPath("$.steps[2].sign.ko").value("일반열차"))
                 .andExpect(jsonPath("$.steps[3].sign.en").value("All-stop Gate"))
@@ -94,7 +96,7 @@ class PublicReadTest extends ApiTestSupport {
             jdbc.update(sql, "Left of the escalator", null);
             getWith("/api/routes/LOCAL/steps", null).andExpect(status().isOk())
                     .andExpect(jsonPath("$.steps[1].elevator").value(nullValue()));
-            for (String blank : new String[] {" ", " ", "﻿\u0085"}) {
+            for (String blank : new String[] {" ", "\u00A0", "\uFEFF\u0085"}) {
                 jdbc.update(sql, blank, "에스컬레이터 왼쪽");
                 getWith("/api/routes/LOCAL/steps", null).andExpect(status().isOk())
                         .andExpect(jsonPath("$.steps[1].elevator").value(nullValue()));
@@ -155,6 +157,15 @@ class PublicReadTest extends ApiTestSupport {
             getWith("/api/tips?" + q, null).andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.step").exists());
         }
         getWith("/api/tips?route=LOCAL&step=6", null).andExpect(jsonPath("$.errors.step").value("1~5 사이의 단계 번호를 보내세요."));
+        // 정수가 아닌 step(int 범위 밖 포함)은 따로 안내한다. route가 틀리면 step 범위는 보지 않는다.
+        for (String step : new String[] {"abc", "1.5", "3000000000"}) {
+            getWith("/api/tips?route=LOCAL&step=" + step, null).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors.step").value("단계 번호는 숫자로 보내세요."));
+        }
+        getWith("/api/tips?route=T2&step=99", null).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.route").exists()).andExpect(jsonPath("$.errors.step").doesNotExist());
+        // 정하지 않은 쿼리 항목은 무시한다
+        getWith("/api/tips?route=LOCAL&step=4&sort=new", null).andExpect(status().isOk());
     }
 
     @Test
@@ -167,7 +178,10 @@ class PublicReadTest extends ApiTestSupport {
                 .andExpect(jsonPath("$.ownerId").value(102))
                 .andExpect(jsonPath("$.note").value(nullValue()))
                 .andExpect(jsonPath("$.mine").value(false));
-        getWith("/api/tips/999999", null).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
+        // 없는 번호는 0·음수도 404(400 아님)
+        for (String id : new String[] {"999999", "0", "-1"}) {
+            getWith("/api/tips/" + id, null).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
+        }
         getWith("/api/tips/abc", null).andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.id").exists());
         // 정수가 아니거나 long 범위를 넘는 id도 400(docs/api-spec.yaml GET /api/tips/{id})
         for (String id : new String[] {"1.5", "9223372036854775808"}) {
@@ -179,9 +193,15 @@ class PublicReadTest extends ApiTestSupport {
 
     @Test
     void publicGetWithInvalidOrExpiredTokenIs401() throws Exception {
+        // 헤더가 있는데 무효인 401은 필터의 문구다(헤더가 없는 보호 API의 '로그인이 필요합니다.'와 다름)
         getWith("/api/routes", "Bearer not-a-jwt").andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("UNAUTHORIZED")).andExpect(jsonPath("$.errors").isMap());
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED")).andExpect(jsonPath("$.errors").isMap())
+                .andExpect(jsonPath("$.message").value("로그인이 만료되었거나 올바르지 않습니다."));
         getWith("/api/tips?route=LOCAL&step=4", bearer(expiredToken())).andExpect(status().isUnauthorized());
         getWith("/api/routes/EXPRESS/steps", bearer(expiredToken())).andExpect(status().isUnauthorized());
+        getWith("/api/tips/7", bearer(expiredToken())).andExpect(status().isUnauthorized());
+        // 무효 헤더는 입력 오류(400)·없는 대상(404)보다 먼저다
+        getWith("/api/tips?route=T2", bearer(expiredToken())).andExpect(status().isUnauthorized());
+        getWith("/api/routes/NOPE/steps", bearer(expiredToken())).andExpect(status().isUnauthorized());
     }
 }

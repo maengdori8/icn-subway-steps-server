@@ -4,7 +4,7 @@
 
 DB는 H2 2.4.240 파일 DB `./data/icn-subway`(프로젝트 폴더 기준)이고, 표는 JPA(`spring.jpa.hibernate.ddl-auto=update`)가 만든다.
 API 계약은 docs/api-spec.yaml이 기준이다. JSON은 camelCase(stepNo, ownerId, verifiedAt), DB 열은 snake_case(step_no, owner_id, verified_at)다.
-엔티티가 만드는 실제 표 정의(CREATE 문)는 docs/schema.sql에 있다(참고용, 테스트 SchemaScriptTest가 이 문서와 같은지 확인).
+docs/schema.sql은 엔티티로 만든 create 스크립트(CREATE 문, 참고용)다. 실행용 DB의 표 정의 그대로는 아니다. 실행 설정(ddl-auto=update)이 새 DB에 보내는 DDL과 열 순서·UNIQUE 방식이 다르다(그 파일 머리말). 테스트 SchemaScriptTest가 그 파일이 지금 엔티티와 같은지 확인한다.
 
 ## 관계
 
@@ -144,7 +144,7 @@ H2 시퀀스는 값을 32개씩 미리 잡아 두므로(CACHE 32) 서버를 강�
 
 `SeedData`가 시작할 때 넣는다. route 표가 비어 있으면 경로·단계를, app_user 표가 비어 있으면 계정·팁을 넣는다. 이미 있으면 아무것도 하지 않으므로 재시작해도 중복되지 않는다.
 
-계정(비밀번호 study-1234는 이 로컬 실습에서만 쓰는 공개 표본 값. DB에는 BCrypt 해시만 저장):
+계정(비밀번호는 docs/requirements.md의 공개 표본 값으로 이 로컬 실습에서만 쓴다. DB에는 BCrypt 해시만 저장):
 
 | id | username |
 | --- | --- |
@@ -159,19 +159,19 @@ H2 시퀀스는 값을 32개씩 미리 잡아 두므로(CACHE 32) 서버를 강�
 | LOCAL | All-stop Train / 일반열차 | true | 5 |
 | T2 | T2 → Seoul Station / T2 → 서울역 | false | 0 |
 
-단계(문구 전체는 `src/main/java/org/skilltransfer/icnsubway/SeedData.java`):
+단계(문구 전체는 `src/main/java/org/skilltransfer/icnsubway/config/SeedData.java`):
 
 | 경로 | stepNo | role | icon | photoKey | 표지판 (ko · en) | 제목 (en) |
 | --- | --- | --- | --- | --- | --- | --- |
 | EXPRESS | 1 | HERE | PLANE | arrivals | 제1여객터미널 입국장 · Terminal 1 Arrivals | Walk out of the arrivals hall |
-| EXPRESS | 2 | FIND | ESCALATOR | null | 교통센터 · 공항철도 · Transportation Center · Airport Railroad | Go down to the Transportation Center |
+| EXPRESS | 2 | FIND | ESCALATOR | transportCenter | 교통센터 · 공항철도 · Transportation Center · Airport Railroad | Go down to the Transportation Center |
 | EXPRESS | 3 | FIND | TRAIN | expressConcourse | 직통열차 · Express Train | Buy an Express Train ticket |
-| EXPRESS | 4 | FIND | TRAIN | null | 직통열차 승차구 · Express Gate | Pass the Express Train gate |
-| EXPRESS | 5 | FIND | TRAIN | null | 직통열차 승강장 · 서울역 방면 · Express Platform · To Seoul Station | Board at the Express platform |
+| EXPRESS | 4 | FIND | TRAIN | expressGate | 직통열차 승차구 · Express Gate | Pass the Express Train gate |
+| EXPRESS | 5 | FIND | TRAIN | expressPlatform | 직통열차 승강장 · 서울역 방면 · Express Platform · To Seoul Station | Board at the Express platform |
 | LOCAL | 1 | HERE | PLANE | arrivals | 제1여객터미널 입국장 · Terminal 1 Arrivals | Walk out of the arrivals hall |
-| LOCAL | 2 | FIND | ESCALATOR | null | 교통센터 · 공항철도 · Transportation Center · Airport Railroad | Go down to the Transportation Center |
+| LOCAL | 2 | FIND | ESCALATOR | transportCenter | 교통센터 · 공항철도 · Transportation Center · Airport Railroad | Go down to the Transportation Center |
 | LOCAL | 3 | FIND | TRAIN | localConcourse | 일반열차 · All-stop Train | Get a T-money card |
-| LOCAL | 4 | FIND | TRAIN | null | 일반열차 승차구 · All-stop Gate | Tap your card at the gate |
+| LOCAL | 4 | FIND | TRAIN | localGate | 일반열차 승차구 · All-stop Gate | Tap your card at the gate |
 | LOCAL | 5 | FIND | TRAIN | localPlatform | 1·2 승강장 · 서울역 방면 · Platform 1·2 · To Seoul Station | Board at platform 1 or 2 |
 
 > **사실 확인 전 초안이다.** 단계 문구·표지판 글자·층수·승강장 위치는 시안 v03의 ROUTES를 그대로 옮긴 것이며 현장·공식 안내로 확인하지 않았다(S02 화면명세 openQuestions 1). 모든 단계의 elevator는 null(현장 확인 후 추가 결정). 확인한 뒤에는 route_step 행을 고친다.

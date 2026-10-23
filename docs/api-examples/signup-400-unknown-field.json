@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/auth/signup",
+    "auth": "없음",
+    "body": {
+      "username": "example02",
+      "password": "<숨김: 새 비밀번호(8자 이상)>",
+      "role": "ADMIN"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {},
+    "body": {
+      "code": "INVALID_REQUEST_BODY",
+      "message": "요청 본문을 읽을 수 없습니다.",
+      "errors": {
+        "role": "허용하지 않는 항목입니다."
+      }
+    }
+  },
+  "meta": {
+    "operation": "POST /api/auth/signup",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님",
+    "replaced": [
+      "request.body.password"
+    ]
+  }
+}

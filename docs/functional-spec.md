@@ -77,7 +77,7 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
   - 사진:
     - photoKey가 null이면 '사진 준비 중'을 보인다.
     - 사진 파일과 출처는 앱 안 표(photoKey → 파일·출처)에서 찾는다. 서버는 사진 파일을 주지 않는다.
-    - 사진 키는 arrivals, expressConcourse, localConcourse, localPlatform 네 개다.
+    - 사진 키는 arrivals, transportCenter, expressConcourse, expressGate, expressPlatform, localConcourse, localGate, localPlatform 여덟 개다.
   - 엘리베이터: elevator가 null이면 '엘리베이터: 현장 확인 중'을 보인다(두 언어 중 한쪽만 채운 단계도 같다).
   - 안내 문구 속 `{ko|공항철도}`는 다른 언어로 읽을 부분이다. 앱은 '|' 뒤 글자만 보이고, 그 조각에 언어 표시를 단다.
 - **실패:** 화면 전체에 안내와 다시 시도를 보인다. 404(없는 경로 코드)도 지금은 같은 안내다. 앱은 S01 목록에 있는 코드만 보내므로 정상 사용에서는 생기지 않는다.
@@ -122,7 +122,7 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
 - **시작:** S02의 한 단계에서 '+ 팁'을 누른다. 로그인 전이면 S04로 갔다가 로그인한 뒤 S03으로 돌아온다(F06).
 - **입력:**
 
-  | 칸 | 필수 | 규칙(앞뒤 공백 제거 뒤, 코드 포인트로 셈) | 정하는 쪽 |
+  | 칸 | 필수 | 규칙(title·location·note는 앞뒤 공백 제거 뒤 코드 포인트로 셈. route는 그대로 비교) | 정하는 쪽 |
   | --- | --- | --- | --- |
   | route | 예 | EXPRESS·LOCAL | 앱(S02에서 넘어옴, 사용자가 고치지 않음) |
   | stepNo | 예 | 1~그 경로의 단계 수 | 앱(S02에서 넘어옴) |
@@ -180,7 +180,7 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
 - **시작:** 내 팁(mine=true, 예시 팁 아님)의 상태 버튼을 누른다.
 - **요청:** PATCH /api/tips/{id}/status {status: VERIFIED|OUTDATED} + Bearer 토큰
 - **서버 처리:**
-  - 판단 순서는 401(인증) → 400(입력) → 404(없는 팁) → 403(올린 사람 아님)이다. 권한을 확인하기 전에는 아무것도 바꾸지 않는다.
+  - 판단 순서는 401(토큰) → 400(경로 id 형식) → 415(JSON이 아닌 본문) → 400(본문·status) → 404(없는 팁) → 403(올린 사람 아님)이다. 권한을 확인하기 전에는 아무것도 바꾸지 않는다(전체 규칙은 api-spec.yaml 공통 규칙).
   - status를 바꾸고 verified_at을 지금으로 바꾼다. 같은 상태를 다시 보내도 200이고 verified_at만 바뀐다(작성자 재확인).
   - title·location·note·owner_id·created_at은 바뀌지 않는다.
 - **화면:**
@@ -282,7 +282,7 @@ API의 필드 이름과 상태 코드는 api-spec.yaml이 기준이다. 둘이 �
 
 ## 5. 오류 코드와 화면
 
-모든 오류 응답은 {code, message, errors}다.
+오류 응답은 {code, message, errors}다(이 모양이 아닌 예외: /error 직접 호출, 보안 필터 안의 예상하지 못한 예외 등은 api-reference.md 6절 B3).
 - message는 한국어 한 가지다.
 - 앱은 code와 errors의 키를 보고 자기 번역 문구를 보인다.
 - 오류 응답에는 스택 추적, SQL, 토큰을 넣지 않는다.

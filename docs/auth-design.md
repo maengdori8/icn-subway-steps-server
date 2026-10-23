@@ -53,14 +53,15 @@
 
 ## 401과 403
 
-| 상황 | 상태 | code |
-| --- | --- | --- |
-| 보호된 API에 토큰 없음 | 401 | UNAUTHORIZED |
-| 토큰 형식 오류·서명 불일치(변조·다른 키)·만료·exp 없음·발급자 다름·alg 다름 | 401 | UNAUTHORIZED |
-| 토큰의 사용자가 DB에 없음·username 다름·계정 생성 전에 발급 | 401 | UNAUTHORIZED |
-| 로그인 실패 | 401 | LOGIN_FAILED |
-| 로그인했지만 그 팁을 올린 사람이 아님 | 403 | FORBIDDEN |
+| 상황 | 상태 | code | message | 주는 곳 |
+| --- | --- | --- | --- | --- |
+| 보호된 API에 Authorization 헤더 없음 | 401 | UNAUTHORIZED | 로그인이 필요합니다. | SecurityConfig 진입점 |
+| 헤더가 Bearer가 아님(Basic 등)·빈 토큰·토큰 형식 오류·서명 불일치(변조·다른 키)·만료·exp·iat·username 없음·발급자 다름·alg 다름 | 401 | UNAUTHORIZED | 로그인이 만료되었거나 올바르지 않습니다. | JwtAuthenticationFilter(공개 GET에도) |
+| 토큰의 사용자가 DB에 없음·username 다름·계정 생성 전에 발급 | 401 | UNAUTHORIZED | 위와 같음 | JwtAuthenticationFilter |
+| 로그인 실패(입력 검사 400을 통과한 뒤) | 401 | LOGIN_FAILED | 아이디 또는 비밀번호가 맞지 않아요. | AuthService |
+| 로그인했지만 그 팁을 올린 사람이 아님 | 403 | FORBIDDEN | 이 팁을 올린 사람만 상태를 바꿀 수 있습니다. | TipService |
 
-401은 "누구인지 모름", 403은 "누구인지는 알지만 이 팁의 주인이 아님"이다.
+401은 "누구인지 모름", 403은 "누구인지는 알지만 이 팁의 주인이 아님"이다. 앱은 message가 아니라 code를 본다.
 상태 변경은 서비스가 DB의 owner_id와 토큰의 사용자 id를 비교한 뒤에만 값을 바꾼다. 앱의 버튼 숨김은 이 검사를 대신하지 않는다.
-판단 순서는 401 → 400(본문) → 404(팁 없음) → 403 → 변경이다.
+상태 변경의 판단 순서는 401(토큰) → 400(경로 id 형식) → 415(JSON이 아닌 본문) → 400(본문·status) → 404(팁 없음) → 403 → 변경이다.
+로그인의 LOGIN_FAILED는 이 401과 달리 400 검사 뒤에 나온다. 전체 순서는 docs/api-spec.yaml 공통 규칙.

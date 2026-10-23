@@ -9,3 +9,6 @@ uploads/
 *.mv.db
 *.trace.db
 reports/raw/
+
+# 8장: 비밀번호를 넣는 내 PC 전용 Postman 환경
+postman/local.environment.json

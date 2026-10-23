@@ -71,3 +71,65 @@ Codex가 동의한 부분: 상태 변경의 입력→404→소유자 비교→�
 | 실행 기록 | reports/verification.md |
 | 실행 주소 | http://127.0.0.1:8097 (`.\gradlew.bat bootRun`, H2 콘솔은 SPRING_PROFILES_ACTIVE=dev) |
 | 테스트 | src/test/java/org/skilltransfer/icnsubway/ (`.\gradlew.bat test`) |
+
+## 8장 변경 파일과 Postman 파일 경로
+
+2026-10-21 · 교재 8장 P05 · 작성 Claude Code. 실행(서버 켜기·Newman)도 Claude Code가 했다(사용자 요청). 커밋은 하지 않았다.
+
+### 바뀐 파일·이유·확인 방법
+
+| 파일 | 바뀐 것 | 이유(요청문) | 확인 방법 |
+| --- | --- | --- | --- |
+| docs/permission-matrix.md (새 파일) | 요청별 로그인 없음·등록자 A·다른 사용자 B의 기대 응답, 표 밖의 경우(없는 번호, 무효 토큰, 입력 오류, 없는 경로, 허용하지 않는 메서드), 확인할 질문 | P00 | 칸마다 코드 파일:줄 근거, Newman 1·2회차, Codex 반박 |
+| docs/state-rules.md (새 파일) | VERIFIED·OUTDATED 전이 표, 바뀌지 않는 값, 교재 예제와 다른 점, 확인할 질문 | P00 | 테스트 PermissionRegressionTest, Newman 4묶음 |
+| src/test/java/org/skilltransfer/icnsubway/PermissionRegressionTest.java | sameStatusAgainKeepsOtherValuesAndRefreshesVerifiedAt 추가 | P02 요청 2(같은 상태 재요청 행) | `.\gradlew.bat test --offline --rerun` 64개 통과 |
+| postman/my-api.collection.json (새 파일) | Collection v2.1, 6묶음 42요청·107검사 | P04 요청 2 | 정적 검사(경로가 명세에 있는지, 변수, 스크립트 문법, 비밀 값), Newman 2회차 실패 0 |
+| postman/my-api.environment.json (새 파일) | baseUrl·userA·userB·passwordA·passwordB(비밀번호 비움) | P04 요청 2 | 정적 검사 |
+| docs/verification-plan.md | '## 8장 Postman·Newman 검사 계획' 절 | P04 요청 2 | 컬렉션과 순서·기대값 대조 |
+| reports/verification.md | '## 8장 Postman·Newman 검사' 절(P02, Newman 1·2회차, Codex 판정, F01 없음, 학생 직접 실행 미실행) | P02·실행·P05 | 값은 실제 실행 출력에서 옮김 |
+| reports/my-api.junit.xml (새 파일) | Newman 2회차 JUnit 보고서 | 실행 | 토큰 모양 값·비밀번호 0건 |
+| .gitignore | postman/local.environment.json 추가 | 교재 3.3 | 비밀번호를 넣는 내 PC 전용 환경을 Git에서 뺌 |
+| prompts/ch08/P00~P05 (새 파일) | 교재 8장 요청문 사본 | 0단계 | 배포 원본과 같음 |
+
+- 서버 구현(src/main)은 바꾸지 않았다. 그래서 docs/api-spec.yaml과 새로 어긋난 곳은 없다.
+- Codex 반박 7건: 수용 6, 일부 수용 1, 기각 0(reports/verification.md '8장 Codex 반박 판정').
+- 위 '앱 연결' 절의 'Flutter 모델과 다른 점'은 2026-10-21에 앱이 서버 계약(camelCase, /api/me/tips)에 맞춰 해소됐다(커밋 311c4bb의 결정).
+
+### Postman 파일과 보고서 경로
+
+| 무엇 | 경로 |
+| --- | --- |
+| 컬렉션 | postman/my-api.collection.json |
+| 환경(공유용, 비밀번호 비움) | postman/my-api.environment.json |
+| 내 PC 전용 환경(비밀번호, Git 제외) | postman/local.environment.json(만들지 않음. Newman은 --env-var로 실행) |
+| Newman 보고서 | reports/my-api.junit.xml |
+| Newman 도구 | C:\dev\chapter08-api\tools\newman\node_modules\.bin\newman.cmd(6.2.1) |
+
+### 9~10장이 읽을 파일
+
+- 교재가 지정한 다섯 개(앱 프로젝트 docs/api/로 복사): docs/api-spec.yaml, docs/data-model.md, docs/auth-design.md, reports/verification.md, reports/change-review.md
+- 함께 읽으면 좋은 것: docs/api-reference.md(사람이 읽는 API 명세서), docs/permission-matrix.md, docs/state-rules.md, docs/api-examples/
+- 앱 프로젝트: C:\dev\projects\icn_subway_app. 복사는 교재 10장 1단계에서 한다(아직 안 함).
+
+### 비어 있는 칸과 미실행 항목
+
+- 학생 직접 실행: 미실행(reports/verification.md '학생 직접 실행')
+- H2 콘솔로 저장값 확인: 미확인(DB 접속·SQL은 학생 몫)
+- Postman 앱 화면(Import·Runner): 미실행. Newman으로만 실행했다.
+- 8장 실패 F01·재검증: 해당 없음(실패 0)
+
+## 패키지 구조 정리 (2026-10-21)
+
+- 요청: "diff 섞여도 괜찮으니까 지금 바로 패키지 구조 정리해줘". Claude Code가 옮기고 검사했다.
+- 로직은 바꾸지 않았다. 새 구조는 README.md '패키지 구조' 절, 검사 결과는 reports/verification.md '패키지 구조 정리' 절에 있다.
+
+| 바뀐 파일 | 바꾼 것 | 이유 |
+| --- | --- | --- |
+| src/main/java/org/skilltransfer/icnsubway/ 아래 클래스 27개 | controller·service·repository·domain·dto·security·config·common 8개 패키지로 이동(git mv), package·import 줄 수정 | 클래스 28개가 한 폴더에 있어 요청 경로(controller → service → repository → domain)를 따라 읽기 어려웠다 |
+| common/TextRules.java | 클래스와 strip·length를 public으로 | 다른 패키지(service)에서 쓴다. Codex 지적 2(service로 옮겨 package-private)는 기각(verification.md 표) |
+| src/test/java/org/skilltransfer/icnsubway/SeedAndSchemaTest.java | config.SeedData import 한 줄 | 테스트는 맨 위 패키지에 그대로 둔다 |
+| README.md | '패키지 구조' 절 추가 | 폴더마다 무슨 역할인지 바로 보이게 |
+| docs/data-model.md, docs/permission-matrix.md, docs/state-rules.md | SeedData 경로, 소스 줄 번호 25곳 | import가 늘어난 만큼 줄 번호가 밀렸다. 옮긴 뒤 33곳 모두 해당 줄을 가리키는지 다시 확인했다 |
+
+- 진입점 StarterApplication.java는 맨 위 패키지에 그대로 두었다(바뀐 줄 없음).
+- 커밋할 때: 지금은 `git mv`로 이동만 staged이고 package·import 변경은 unstaged다. 둘을 함께 stage해야 한다(Codex 지적 1). `git add -A`를 쓰면 아직 커밋하지 않은 API 명세서·8장 파일도 함께 들어간다.

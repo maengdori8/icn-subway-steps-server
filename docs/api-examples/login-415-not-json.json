@@ -1,0 +1,23 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/auth/login",
+    "auth": "없음",
+    "contentType": "text/plain",
+    "body": "username=student01"
+  },
+  "response": {
+    "status": 415,
+    "headers": {},
+    "body": {
+      "code": "UNSUPPORTED_MEDIA_TYPE",
+      "message": "Content-Type: application/json 으로 보내세요.",
+      "errors": {}
+    }
+  },
+  "meta": {
+    "operation": "POST /api/auth/login",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

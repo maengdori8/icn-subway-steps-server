@@ -2,10 +2,13 @@ package org.skilltransfer.icnsubway;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 
 /** V20~V28: 팁 등록. 글자 수는 앞뒤 공백 제거 뒤 코드 포인트로 센다. */
 class TipWriteTest extends ApiTestSupport {
@@ -15,7 +18,7 @@ class TipWriteTest extends ApiTestSupport {
     void createReturns201WithLocationAndServerOwnedFields() throws Exception {
         String token = student01();
         String res = text(postJson("/api/tips", token,
-                body("route", "LOCAL", "stepNo", 2, "title", "  넓은 개찰구  ", "location", " 개찰구 왼쪽 끝　", "note", "   "))
+                body("route", "LOCAL", "stepNo", 2, "title", "  넓은 개찰구  ", "location", "\u00A0개찰구 왼쪽 끝\u3000", "note", "   "))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", matchesPattern("/api/tips/\\d+")))
                 .andExpect(jsonPath("$.id").value(greaterThanOrEqualTo(9)))
@@ -70,7 +73,7 @@ class TipWriteTest extends ApiTestSupport {
     @Test
     void blankTitleOrLocation() throws Exception {
         String token = student01();
-        for (String blank : new String[] {"", "   ", " 　\t"}) {
+        for (String blank : new String[] {"", "   ", "\u00A0\u3000\t"}) {
             postJson("/api/tips", token, tip(blank, blank, null))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errors.title").value("1~80자로 입력하세요."))
@@ -147,12 +150,12 @@ class TipWriteTest extends ApiTestSupport {
     @Test
     void unicodeSpacesAreTrimmedLikeTheApp() throws Exception {
         String token = student01();
-        postJson("/api/tips", token, tip(" 제목﻿", "﻿B1\u0085 ", " 　\u0085"))
+        postJson("/api/tips", token, tip("\u00A0제목\uFEFF", "\uFEFFB1\u0085\u2028", "\u00A0\u3000\u0085"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("제목"))
                 .andExpect(jsonPath("$.location").value("B1"))
                 .andExpect(jsonPath("$.note").value(nullValue()));
-        postJson("/api/tips", token, tip(" ﻿\n", "\u0085", null))
+        postJson("/api/tips", token, tip("\u00A0\uFEFF\n", "\u0085", null))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.title").value("1~80자로 입력하세요."))
                 .andExpect(jsonPath("$.errors.location").value("1~80자로 입력하세요."));
@@ -184,6 +187,28 @@ class TipWriteTest extends ApiTestSupport {
         postJson("/api/tips", expiredToken(), tip("t", "l", null)).andExpect(status().isUnauthorized());
         // 401이 입력 오류보다 먼저다
         postJson("/api/tips", null, tip("", "", null)).andExpect(status().isUnauthorized());
+        assertThat(tipCount()).isEqualTo(before);
+    }
+
+    /** 본문이 JSON이 아니면 415 UNSUPPORTED_MEDIA_TYPE(docs/api-spec.yaml). 토큰 검사(401)가 먼저이고, 팁은 저장되지 않는다. */
+    @Test
+    void nonJsonBodyIs415AfterTokenCheck() throws Exception {
+        String token = student01();
+        int before = tipCount();
+        String json = toJson(tip("t", "l", null));
+        for (String type : new String[] {"text/plain", "application/x-www-form-urlencoded"}) {
+            mvc.perform(post("/api/tips").header(HttpHeaders.AUTHORIZATION, bearer(token)).contentType(type).content(json))
+                    .andExpect(status().isUnsupportedMediaType())
+                    .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
+            mvc.perform(post("/api/tips").contentType(type).content(json)).andExpect(status().isUnauthorized());
+        }
+        // Content-Type 없이 본문만 있어도 415, 본문까지 비면 400 INVALID_REQUEST_BODY
+        mvc.perform(post("/api/tips").header(HttpHeaders.AUTHORIZATION, bearer(token)).content(json))
+                .andExpect(status().isUnsupportedMediaType());
+        mvc.perform(post("/api/tips").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"));
+        mvc.perform(patch("/api/tips/8/status").header(HttpHeaders.AUTHORIZATION, bearer(token)).contentType("text/plain").content("OUTDATED"))
+                .andExpect(status().isUnsupportedMediaType());
         assertThat(tipCount()).isEqualTo(before);
     }
 

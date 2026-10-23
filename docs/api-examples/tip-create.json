@@ -1,0 +1,43 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/tips",
+    "auth": "student01 토큰",
+    "body": {
+      "route": "LOCAL",
+      "stepNo": 4,
+      "title": "넓은 개찰구",
+      "location": "개찰구 왼쪽 끝",
+      "note": null
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "Location": "/api/tips/9"
+    },
+    "body": {
+      "id": 9,
+      "route": "LOCAL",
+      "stepNo": 4,
+      "title": "넓은 개찰구",
+      "location": "개찰구 왼쪽 끝",
+      "note": null,
+      "status": "VERIFIED",
+      "verifiedAt": "2026-10-21T00:00:00Z",
+      "createdAt": "2026-10-21T00:00:00Z",
+      "ownerId": 101,
+      "mine": true,
+      "example": false
+    }
+  },
+  "meta": {
+    "operation": "POST /api/tips",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님",
+    "replaced": [
+      "response.body.createdAt",
+      "response.body.verifiedAt"
+    ]
+  }
+}

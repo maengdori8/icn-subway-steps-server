@@ -1,8 +1,9 @@
 -- =====================================================================
--- 참고용 · 표는 JPA가 만든다 · 학생이 H2 콘솔에서 직접 비교해 볼 것
+-- 참고용 create 스크립트 · 실행용 DB의 표 정의 그대로가 아니다 · 학생이 H2 콘솔에서 직접 비교해 볼 것
 -- =====================================================================
 -- 이 파일을 실행해서 표를 만들지 않는다. 실행용 DB(data/icn-subway)의 표는 서버가 시작할 때
 -- JPA(spring.jpa.hibernate.ddl-auto=update)가 엔티티(AppUser, Route, RouteStep, Tip)를 보고 만든다.
+-- 이 파일은 같은 엔티티로 Hibernate가 '처음부터 새로 만들기(create)' 스크립트를 쓴 결과다.
 --
 -- 만든 방법 (2026-10-21, Spring Boot 4.1.1 · Hibernate 7.4.5 · H2 2.4.240)
 --   1) 테스트 SchemaScriptTest가 메모리 DB(jdbc:h2:mem:icn-schema)로 서버를 띄운다.
@@ -15,13 +16,22 @@
 --      같은 테스트가 이 파일과 build/schema/create.sql의 문장이 같은지 비교한다
 --      (엔티티를 바꾸면 테스트가 실패하므로 이 파일을 다시 정리한다).
 --
+-- 실행 설정(ddl-auto=update)이 새 빈 DB에 보내는 DDL과 다른 점
+-- (2026-10-21, 프로젝트 사본의 메모리 DB를 ddl-auto=update로 띄워 Hibernate 로그로 확인. 실행용 data/ 아님)
+--   - 열 순서: 이 파일은 자료형 크기 순(고정 크기 열 → varchar 짧은 순 → enum)이다.
+--     update는 기본 키 열을 먼저, 나머지를 열 이름 순으로 쓰고, FK 열(route_code·owner_id)을 맨 뒤에 둔다.
+--     H2 콘솔의 ORDINAL_POSITION은 update 순서로 보인다.
+--   - UNIQUE: 이 파일은 create table 안에 unique를 쓴다(제약 이름은 H2가 CONSTRAINT_... 로 붙인다).
+--     update는 표를 만든 뒤 alter table ... add constraint로 이름 있는 제약을 단다:
+--     app_user UK3k4cplvh82srueuttfkwnylq0 unique (username), route_step UKak7var20ffl3l16y0wuif78iw unique (route_code, step_no).
+--   - 같은 것: 열 이름·자료형·길이·NOT NULL, ENUM 값, 시퀀스(시작값·증가), 인덱스 이름·열, FK 이름·대상.
+--
 -- 읽을 때 주의
---   - 열 순서는 Hibernate가 정한 순서다(엔티티에 적은 순서와 다르다).
 --   - role·icon·status는 VARCHAR가 아니라 H2 ENUM 열이다. 넣을 수 있는 값이 정해져 있다.
 --   - ddl-auto=update는 VARCHAR 길이 같은 일부 변경은 ALTER로 맞추지만 ENUM 값 목록은 바꾸지 않는다.
 --     실행용 DB가 이 파일과 다를 수 있으니 H2 콘솔에서 비교한다(docs/data-model.md '보존과 초기화').
---   - FK 이름(FK...)은 Hibernate가 표·열 이름으로 만든 고정 이름이다.
---     PK·UNIQUE 제약 이름은 H2가 붙이므로(CONSTRAINT_7 등) DB마다 다를 수 있다.
+--   - FK 이름(FK...)과 update의 UNIQUE 이름(UK...)은 Hibernate가 표·열 이름으로 만든 고정 이름이다.
+--     PK 제약 이름은 H2가 붙이므로(CONSTRAINT_7 등) DB마다 다를 수 있다.
 --
 -- H2 콘솔에서 비교해 보기 (dev 프로필로 서버를 켠 뒤 학생이 직접 실행, README의 H2 콘솔 안내)
 --   SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE
@@ -29,7 +39,11 @@
 --   SELECT SEQUENCE_NAME, START_VALUE, INCREMENT, CACHE FROM INFORMATION_SCHEMA.SEQUENCES WHERE SEQUENCE_SCHEMA = 'PUBLIC'
 --   SELECT TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = 'PUBLIC'
 --   SELECT TABLE_NAME, INDEX_NAME, INDEX_TYPE_NAME FROM INFORMATION_SCHEMA.INDEXES WHERE TABLE_SCHEMA = 'PUBLIC'
---   SELECT OBJECT_NAME, VALUE_NAME FROM INFORMATION_SCHEMA.ENUM_VALUES WHERE OBJECT_SCHEMA = 'PUBLIC'
+--   ENUM 값을 열 이름과 함께 보기:
+--   SELECT C.TABLE_NAME, C.COLUMN_NAME, E.VALUE_NAME FROM INFORMATION_SCHEMA.COLUMNS C
+--     JOIN INFORMATION_SCHEMA.ENUM_VALUES E ON E.OBJECT_SCHEMA = C.TABLE_SCHEMA AND E.OBJECT_NAME = C.TABLE_NAME
+--     AND E.OBJECT_TYPE = 'TABLE' AND E.ENUM_IDENTIFIER = C.DTD_IDENTIFIER
+--     WHERE C.TABLE_SCHEMA = 'PUBLIC' ORDER BY C.TABLE_NAME, C.COLUMN_NAME, E.VALUE_ORDINAL
 -- =====================================================================
 
 

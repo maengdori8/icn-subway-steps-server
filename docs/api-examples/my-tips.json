@@ -1,0 +1,35 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/me/tips",
+    "auth": "student01 토큰",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {},
+    "body": {
+      "tips": [
+        {
+          "id": 8,
+          "route": "LOCAL",
+          "stepNo": 4,
+          "title": "Elevator for big suitcases",
+          "location": "Left end of the gates",
+          "note": "The wide gate next to it fits two suitcases.",
+          "status": "OUTDATED",
+          "verifiedAt": "2026-09-30T03:00:00Z",
+          "createdAt": "2026-09-30T03:00:00Z",
+          "ownerId": 101,
+          "mine": true,
+          "example": false
+        }
+      ]
+    }
+  },
+  "meta": {
+    "operation": "GET /api/me/tips",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님"
+  }
+}

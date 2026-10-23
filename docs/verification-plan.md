@@ -68,3 +68,76 @@
 | V41 | 로그인 → 팁 등록 → 상태 변경 → 내 팁 (Invoke-WebRequest, 한글 UTF-8) | 200·201·200·200 |
 | V42 | 재시작 후 같은 토큰으로 내 팁 | 200 (키 재사용), 시드 중복 없음 |
 | V43 | dev 프로필에서 /h2-console/ | 200. 기본 프로필에서는 열리지 않음 |
+
+## 8장 Postman·Newman 검사 계획
+
+교재 8장 P04로 만든 계획이다. 실제 결과는 reports/verification.md의 '8장 Postman·Newman 검사' 절에 적는다.
+기준 문서는 docs/api-spec.yaml, docs/permission-matrix.md, docs/state-rules.md다.
+
+### 파일
+
+| 파일 | 내용 |
+| --- | --- |
+| postman/my-api.collection.json | Collection v2.1. 6묶음 42요청. 토큰·사용자 번호·새 팁 번호·비교값은 컬렉션 변수(tokenA, tokenB, userIdA, userIdB, tipId, snapshot, runTag, countBefore) |
+| postman/my-api.environment.json | baseUrl, userA(student01), userB(student02), passwordA·passwordB(값은 비움)만 둔다 |
+| postman/local.environment.json | 비밀번호를 넣는 내 PC 전용 사본. .gitignore로 Git에서 뺀다(만들지 않고 Newman의 --env-var로 넘겨도 된다) |
+
+### 교재 예제와 다른 점
+
+- 교재의 itemId는 이 앱에서 tipId다. '반환'은 상태 바꾸기(PATCH /api/tips/{id}/status)다.
+- 이 API에는 수정(PUT)과 삭제(DELETE)가 없다. 거절 시험은 상태 바꾸기로 한다. 지금 저장값(VERIFIED)과 다른 값(OUTDATED)을 보낸다.
+- 정리(삭제) 단계가 없다. 검사로 만든 팁은 남는다. 제목이 '[Postman] 8장 검사'로 시작하고, 상태는 마지막에 VERIFIED로 되돌린다.
+  - 지우려면 서버를 끄고 data/icn-subway.mv.db를 지운다. 다음 실행 때 시드부터 다시 만들어지며, 그동안 넣은 다른 자료도 함께 사라진다(docs/data-model.md '보존과 초기화').
+- 거절 뒤 비교에는 mine을 뺀다. mine은 토큰에 따라 계산되는 값이기 때문이다. 비교하는 값은 id, route, stepNo, title, location, note, status, verifiedAt, createdAt, ownerId, example 11개이고, 이 목록은 고정해서 쓴다(응답에서 값이 빠지면 저장 단계에서 실패).
+- 삭제 시도(DELETE)는 정리 단계가 아니라 거절 시험이다. 삭제 API가 없다는 것(401·405)과 시도 뒤에도 팁이 그대로인지를 확인한다.
+- 상태를 바꾸는 요청 앞에는 30ms를 기다린다. 서버가 시각을 밀리초까지 저장하므로, '다시 기록됐다'를 '이전 값보다 뒤'로 엄격하게 확인하기 위해서다.
+- Postman 앱에서 실행한 뒤 컬렉션이나 환경을 다시 내보내면 저장된 토큰·비밀번호가 함께 나갈 수 있다. 공유·커밋은 이 원본 파일로 한다.
+
+### 요청 순서와 기대
+
+| 묶음 | 요청 | 계정 | 기대 |
+| --- | --- | --- | --- |
+| 1 공개 목록과 로그인 | GET /api/routes, GET /api/routes/LOCAL/steps | 없음 | 200. EXPRESS·LOCAL 안내 중, LOCAL은 2단계 이상 |
+| | POST /api/auth/login (A, B) | 없음 | 200, tokenType Bearer. tokenA·tokenB·userIdA·userIdB 저장, A와 B는 다른 사용자 |
+| 2 A의 새 팁 등록 | POST /api/tips | A | 201, Location /api/tips/{id}. 보낸 route·stepNo·title·location·note가 그대로, ownerId = A, VERIFIED, example false, mine true, verifiedAt = createdAt. 11개 값의 존재·자료형을 확인한 뒤 tipId·snapshot 저장 |
+| | GET /api/tips/{tipId} | 없음 | 200, snapshot과 같음, mine false |
+| 3 거절과 재조회 | GET /api/tips?route=LOCAL&step=2 | 없음 | 200, 개수를 countBefore에 기록 |
+| | POST /api/tips 토큰 없음 / 제목 공백만 / 제목 81자 / 본문에 ownerId | 없음, A | 401 UNAUTHORIZED / 400 VALIDATION_FAILED(title) / 400 VALIDATION_FAILED(title) / 400 INVALID_REQUEST_BODY(ownerId) |
+| | GET /api/tips?route=LOCAL&step=2 | 없음 | 개수가 countBefore와 같음(거절된 등록은 팁을 남기지 않음) |
+| | PATCH 상태 OUTDATED: 토큰 없음 / 무효 토큰 / B | 없음, 무효, B | 401 / 401 / 403 FORBIDDEN. 거절할 때마다 GET으로 다시 읽어 11개 값이 snapshot과 같음 |
+| | GET /api/routes 무효 토큰 | 무효 | 401(헤더가 있으면 공개 GET도 검사) |
+| | PATCH 잘못된 status: B가 DELETED / A가 소문자 / A가 {} / A가 status+title | B, A | 400 VALIDATION_FAILED(status) ×3 / 400 INVALID_REQUEST_BODY(title). B도 403보다 400이 먼저 |
+| | PATCH /api/tips/999999999/status | A, 없음 | 404 NOT_FOUND / 401(인증이 먼저) |
+| | DELETE /api/tips/{tipId} | 없음, A | 401 / 405 METHOD_NOT_ALLOWED. 다시 읽어 snapshot과 같음 |
+| | GET /api/tipz(없는 경로) | 없음, A | 401 / 404 NOT_FOUND |
+| 4 상태 변경과 반복 | PATCH OUTDATED | A | 200, 같은 id, OUTDATED, 다른 값 그대로, verifiedAt이 이전 값보다 뒤. snapshot 갱신 |
+| | PATCH OUTDATED 다시 | A | 200, OUTDATED 유지, 다른 값 그대로, verifiedAt만 이전 값보다 뒤로 다시 기록. GET으로 다시 읽어 같음 |
+| | PATCH VERIFIED | A | 200, VERIFIED로 되돌림, verifiedAt이 이전 값보다 뒤 |
+| 5 내 팁과 목록 | GET /api/me/tips | A, B, 없음 | A: 새 팁 있음, 모든 항목이 ownerId = A·mine true / B: 새 팁 없음, 모든 항목이 ownerId = B·mine true / 없음: 401 |
+| | GET /api/tips?route=LOCAL&step=2 | A, B | 새 팁의 mine이 A면 true, B면 false |
+| 6 계정 | POST /api/auth/signup (userA) | 없음 | 409 USERNAME_TAKEN(A가 이미 로그인된 뒤라 새 계정이 생기지 않음) |
+| | POST /api/auth/login 틀린 비밀번호 / 빈 칸 | 없음 | 401 LOGIN_FAILED / 400 VALIDATION_FAILED |
+
+### 실행 명령
+
+서버를 켠다(창 1, 내 서버 프로젝트 폴더).
+
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot'
+.\gradlew.bat bootRun --args="--spring.profiles.active=dev"
+```
+
+Newman을 실행한다(창 2, 내 서버 프로젝트 폴더). 비밀번호는 local.environment.json에만 넣거나, 아래처럼 실행할 때만 넘긴다.
+
+```powershell
+$taskNewman = 'C:\dev\chapter08-api\tools\newman\node_modules\.bin\newman.cmd'
+& $taskNewman run .\postman\my-api.collection.json `
+  -e .\postman\my-api.environment.json `
+  --env-var "passwordA=<표본 비밀번호>" --env-var "passwordB=<표본 비밀번호>" `
+  --reporters cli,junit `
+  --reporter-junit-export .\reports\my-api.junit.xml
+$LASTEXITCODE
+```
+
+- 표본 비밀번호는 docs/requirements.md '표본 자료'에 있다. 이 문서와 Postman 파일에는 적지 않는다.
+- $LASTEXITCODE가 0이면 모든 검사가 통과한 것이다. 1이면 출력 끝의 실패 목록에서 처음 실패한 요청부터 읽는다.

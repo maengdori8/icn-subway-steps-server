@@ -3,10 +3,12 @@ package org.skilltransfer.icnsubway;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.skilltransfer.icnsubway.config.SeedData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
@@ -76,9 +78,14 @@ class SeedAndSchemaTest extends ApiTestSupport {
         assertThatThrownBy(() -> jdbc.update("insert into route_step (route_code, step_no, role, icon, sign_ko, sign_en, title_en, title_ko, "
                 + "instructions_en, instructions_ko) values ('EXPRESS', 1, 'HERE', 'PLANE', 'k', 'e', 't', 't', 'i', 'i')"))
                 .isInstanceOf(DuplicateKeyException.class);
+        // 허용하지 않는 ENUM 값: FK·NOT NULL 같은 다른 이유가 아니라 ENUM 검사(H2 SQLSTATE 22030 'Value not permitted')로 거절되는지까지 본다
         assertThatThrownBy(() -> jdbc.update("insert into tip (id, route_code, step_no, title, location, status, verified_at, created_at, owner_id, example) "
                 + "values (9002, 'EXPRESS', 1, 't', 'l', 'DELETED', current_timestamp, current_timestamp, 101, false)"))
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .rootCause()
+                .isInstanceOfSatisfying(SQLException.class, e -> assertThat(e.getSQLState()).isEqualTo("22030"))
+                .hasMessageContaining("Value not permitted")
+                .hasMessageContaining("DELETED");
 
         assertThat(jdbc.queryForList("select column_name from information_schema.index_columns "
                 + "where table_schema = 'PUBLIC' and index_name = 'IX_TIP_ROUTE_STEP' order by ordinal_position", String.class))

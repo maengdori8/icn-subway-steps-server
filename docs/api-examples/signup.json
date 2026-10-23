@@ -1,0 +1,27 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/auth/signup",
+    "auth": "없음",
+    "body": {
+      "username": "example01",
+      "password": "<숨김: 새 비밀번호(8자 이상)>"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {},
+    "body": {
+      "id": 103,
+      "username": "example01"
+    }
+  },
+  "meta": {
+    "operation": "POST /api/auth/signup",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님",
+    "replaced": [
+      "request.body.password"
+    ]
+  }
+}

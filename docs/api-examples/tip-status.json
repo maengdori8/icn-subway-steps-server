@@ -1,0 +1,37 @@
+{
+  "request": {
+    "method": "PATCH",
+    "url": "/api/tips/9/status",
+    "auth": "student01 토큰",
+    "body": {
+      "status": "OUTDATED"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {},
+    "body": {
+      "id": 9,
+      "route": "LOCAL",
+      "stepNo": 4,
+      "title": "넓은 개찰구",
+      "location": "개찰구 왼쪽 끝",
+      "note": null,
+      "status": "OUTDATED",
+      "verifiedAt": "2026-10-21T00:05:00Z",
+      "createdAt": "2026-10-21T00:00:00Z",
+      "ownerId": 101,
+      "mine": true,
+      "example": false
+    }
+  },
+  "meta": {
+    "operation": "PATCH /api/tips/{id}/status",
+    "source": "ApiExamplesGenerator · 테스트 프로필 · 메모리 DB",
+    "note": "자동 테스트 예시이며 실행 서버의 실제 응답이 아님",
+    "replaced": [
+      "response.body.createdAt",
+      "response.body.verifiedAt"
+    ]
+  }
+}
